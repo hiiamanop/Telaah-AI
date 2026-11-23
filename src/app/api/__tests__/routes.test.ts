@@ -26,6 +26,7 @@ vi.mock("@/lib/market/commodities", () => ({
 
 import { GET as getInsiderFeed } from "../insider-feed/route";
 import { GET as getCommodityPrices } from "../commodity-prices/route";
+import { POST as postQa } from "../qa/route";
 
 describe("open-market API routes", () => {
   it("returns unavailable for the insider feed without a scraper", async () => {
@@ -36,6 +37,22 @@ describe("open-market API routes", () => {
     expect(body.success).toBe(true);
     expect(body.filings).toEqual([]);
     expect(body.unavailable).toBe(true);
+  });
+
+  it("rejects an incomplete report instead of crashing the QA route", async () => {
+    const response = await postQa(
+      new Request("http://localhost/api/qa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: "Apa risikonya?",
+          report: { symbol: "BBCA" },
+        }),
+      }) as any
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/laporan/i);
   });
 
   it("returns Yahoo commodity benchmarks", async () => {

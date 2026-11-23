@@ -39,6 +39,7 @@ import {
   clearHistory,
   removeHistoryItem,
   getWatchlistSymbols,
+  isReportCacheCompatible,
 } from "@/lib/storage/history";
 import { ExecutiveSummary } from "@/components/retail/ExecutiveSummary";
 import {
@@ -194,9 +195,16 @@ export default function Home() {
       if (savedSessions) {
         const parsed = JSON.parse(savedSessions);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          const sanitized: ChatSession[] = parsed.map((session: ChatSession) => ({
+            ...session,
+            report:
+              session.report && isReportCacheCompatible(session.report)
+                ? session.report
+                : null,
+          }));
           const requestedId = new URLSearchParams(window.location.search).get("session");
-          const selected = parsed.find((session: ChatSession) => session.id === requestedId) || parsed[0];
-          setSessions(parsed);
+          const selected = sanitized.find((session) => session.id === requestedId) || sanitized[0];
+          setSessions(sanitized);
           setActiveSessionId(selected.id);
           setMessages(selected.messages || []);
           if (selected.report) setReport(selected.report);
@@ -223,7 +231,7 @@ export default function Home() {
 
   // Copilot contextual chat khusus emiten aktif di kanvas
   const handleCopilotSend = async (userText: string) => {
-    if (!report) return;
+    if (!report || !isReportCacheCompatible(report)) return;
     const timeStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
     const userMsg: ChatMessage = {
       id: "u_cop_" + Date.now(),
@@ -248,6 +256,9 @@ export default function Home() {
         body: JSON.stringify({ question: userText, report, history: historyPayload }),
       });
       const qaData = await qaRes.json();
+      if (!qaRes.ok) {
+        throw new Error(qaData.error || "Gagal memproses pertanyaan.");
+      }
       const botReply: ChatMessage = {
         id: "b_cop_" + Date.now(),
         sender: "assistant",
@@ -298,7 +309,11 @@ export default function Home() {
     if (session) {
       setActiveSessionId(session.id);
       setMessages(session.messages);
-      if (session.report) setReport(session.report);
+      setReport(
+        session.report && isReportCacheCompatible(session.report)
+          ? session.report
+          : null
+      );
       setViewMode("chat"); // Pastikan selalu kembali ke tampilan history chat utama
     }
   };
@@ -497,28 +512,38 @@ export default function Home() {
     }
 
     // 5. If a report is already active and NO new stock was introduced, answer as contextual QA
-    if (report) {
+    const activeReport =
+      report && isReportCacheCompatible(report) ? report : null;
+    if (report && !activeReport) {
+      setReport(null);
+    }
+
+    if (activeReport) {
       setIsLoading(true);
-      setLoadingStage(`Menjawab pertanyaan berbasis data ${report.symbol}...`);
+      setLoadingStage(`Menjawab pertanyaan berbasis data ${activeReport.symbol}...`);
 
       try {
         const qaRes = await fetch("/api/qa", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userText, report }),
+          body: JSON.stringify({ question: userText, report: activeReport }),
         });
         const qaData = await qaRes.json();
+
+        if (!qaRes.ok) {
+          throw new Error(qaData.error || "Gagal memproses pertanyaan.");
+        }
 
         const botReply: ChatMessage = {
           id: "b_" + Date.now(),
           sender: "assistant",
-          text: qaData.answer || `Data untuk ${report.symbol} tercatat dengan baik. Silakan cek modul terminal jika perlu rincian lanjutan.`,
+          text: qaData.answer || `Data untuk ${activeReport.symbol} tercatat dengan baik. Silakan cek modul terminal jika perlu rincian lanjutan.`,
           timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
         };
 
         const finalMsgs = [...newMessages, botReply];
         setMessages(finalMsgs);
-        updateActiveSession(finalMsgs, report);
+        updateActiveSession(finalMsgs, activeReport);
       } catch (err: any) {
         const botReply: ChatMessage = {
           id: "b_" + Date.now(),

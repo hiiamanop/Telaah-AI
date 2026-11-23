@@ -6,6 +6,8 @@ import {
   ClaimEvaluation,
   CompanyIntelligenceReport,
   IntentType,
+  REPORT_DATA_SOURCE,
+  REPORT_DATA_VERSION,
 } from "./types";
 
 interface RawEvaluationItem {
@@ -233,6 +235,9 @@ Jawab HANYA dalam format JSON valid berikut:
     integrity: evidence.integrity,
     tradingPlan: evidence.tradingPlan,
     segments: evidence.segments,
+    dataSource: REPORT_DATA_SOURCE,
+    dataVersion: REPORT_DATA_VERSION,
+    dataLimitations: evidence.dataLimitations,
     openQuestions: Array.isArray(response.openQuestions) && response.openQuestions.length > 0
       ? response.openQuestions
       : ["Perlu mencermati perkembangan realisasi laba kuartal berikutnya."],

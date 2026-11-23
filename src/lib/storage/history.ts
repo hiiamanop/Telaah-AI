@@ -1,4 +1,8 @@
-import { CompanyIntelligenceReport } from "../agent/types";
+import {
+  CompanyIntelligenceReport,
+  REPORT_DATA_SOURCE,
+  REPORT_DATA_VERSION,
+} from "../agent/types";
 
 export interface SavedReportItem {
   id: string;
@@ -148,6 +152,16 @@ export function saveReportToHistory(report: CompanyIntelligenceReport): void {
   }
 }
 
+export function isReportCacheCompatible(report: {
+  dataSource?: string;
+  dataVersion?: number;
+}): boolean {
+  return (
+    report.dataSource === REPORT_DATA_SOURCE &&
+    report.dataVersion === REPORT_DATA_VERSION
+  );
+}
+
 /**
  * Mengambil full report yang tersimpan dari cache lokal (0 Kredit API)
  */
@@ -158,7 +172,12 @@ export function getReportFromCache(symbol: string): CompanyIntelligenceReport | 
   try {
     const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
-    return JSON.parse(raw) as CompanyIntelligenceReport;
+    const report = JSON.parse(raw) as CompanyIntelligenceReport;
+    if (!isReportCacheCompatible(report)) {
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
+    return report;
   } catch (err) {
     console.error(`Gagal membaca cache report untuk ${clean}:`, err);
     return null;

@@ -110,6 +110,7 @@ export const FlowLensModule: React.FC<FlowLensModuleProps> = ({ flowLens }) => {
       </div>
 
       {/* Cohort Summary Cards */}
+      {flowLens.coverage !== "none" && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-white dark:bg-black p-2.5 rounded border border-slate-100 dark:border-slate-800/60">
           <span className="text-[10px] font-mono uppercase text-slate-500 flex items-center gap-1">
@@ -163,6 +164,15 @@ export const FlowLensModule: React.FC<FlowLensModuleProps> = ({ flowLens }) => {
           </span>
         </div>
       </div>
+      )}
+
+      {flowLens.status === "partial" && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+          {flowLens.coverage === "top10"
+            ? "Broker summary hanya 10 broker teratas per sisi; fase akumulasi/distribusi tidak dihitung."
+            : "Broker summary tidak tersedia; FlowLens hanya menampilkan foreign flow."}
+        </div>
+      )}
 
       {/* Diagnosa Bandarmology Bahasa Manusia Box */}
       {flowLens.bandarmologySummary && (

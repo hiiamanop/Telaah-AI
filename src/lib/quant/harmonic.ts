@@ -73,10 +73,10 @@ export const TIMEFRAME_CONFIG: Record<
   HarmonicTimeframe,
   { zigzagPct: number; maxDistancePct: number; weight: number; minCandles: number }
 > = {
-  "4H": { zigzagPct: 4, maxDistancePct: 6, weight: 5, minCandles: 40 },
-  "1D": { zigzagPct: 7, maxDistancePct: 8, weight: 12, minCandles: 60 },
-  "1W": { zigzagPct: 10, maxDistancePct: 12, weight: 17, minCandles: 40 },
-  "1M": { zigzagPct: 15, maxDistancePct: 18, weight: 20, minCandles: 24 },
+  "4H": { zigzagPct: 4, maxDistancePct: 10, weight: 5, minCandles: 40 },
+  "1D": { zigzagPct: 7, maxDistancePct: 15, weight: 12, minCandles: 60 },
+  "1W": { zigzagPct: 10, maxDistancePct: 20, weight: 17, minCandles: 40 },
+  "1M": { zigzagPct: 15, maxDistancePct: 25, weight: 20, minCandles: 24 },
 };
 
 interface PatternRule {
@@ -149,6 +149,41 @@ function alternates(pivots: HarmonicPivot[]): boolean {
   return pivots.every(
     (pivot, index) => index === 0 || pivot.type !== pivots[index - 1].type
   );
+}
+
+/**
+ * Weekly/monthly bars can contain both the high and the low of a swing. The
+ * raw ZigZag can then emit two pivots on the same bar; keep one so the XABCD
+ * sequence stays a real alternating swing structure.
+ */
+function normalizePivots(pivots: HarmonicPivot[]): HarmonicPivot[] {
+  const cleaned: HarmonicPivot[] = [];
+
+  for (const pivot of pivots) {
+    const last = cleaned[cleaned.length - 1];
+    if (!last) {
+      cleaned.push(pivot);
+      continue;
+    }
+
+    if (pivot.index === last.index) {
+      const before = cleaned[cleaned.length - 2];
+      if (before && before.type === pivot.type) continue;
+      cleaned[cleaned.length - 1] = pivot;
+      continue;
+    }
+
+    if (pivot.type === last.type) {
+      const keepNew =
+        pivot.type === "high" ? pivot.price > last.price : pivot.price < last.price;
+      if (keepNew) cleaned[cleaned.length - 1] = pivot;
+      continue;
+    }
+
+    cleaned.push(pivot);
+  }
+
+  return cleaned;
 }
 
 /**
@@ -246,7 +281,7 @@ export function findPivots(
     }
   }
 
-  return pivots;
+  return normalizePivots(pivots);
 }
 
 /**
@@ -488,9 +523,6 @@ export function detectHarmonicPatterns(
   const currentPrice = candles[candles.length - 1].close;
   if (!Number.isFinite(currentPrice) || currentPrice <= 0) return [];
 
-  const pivots = findPivots(candles, config.zigzagPct);
-  if (pivots.length < 4) return [];
-
   const matches: HarmonicMatch[] = [];
   const seen = new Set<string>();
 
@@ -508,108 +540,126 @@ export function detectHarmonicPatterns(
     matches.push(match);
   };
 
-  for (let end = 4; end < pivots.length; end += 1) {
-    const window = pivots.slice(end - 4, end + 1);
-    if (!alternates(window)) continue;
+  // One ZigZag scale can miss a clean swing that a slightly larger or smaller
+  // scale captures. Scanning a few scales keeps the ratios honest while
+  // giving the daily brief enough candidates on quiet days.
+  const scales = [...new Set(
+    [0.75, 1, 1.3, 1.6].map(
+      (factor) => Math.round(config.zigzagPct * factor * 10) / 10
+    )
+  )];
 
-    const direction: HarmonicDirection =
-      window[0].type === "low" ? "bullish" : "bearish";
-    const evaluation = evaluateHarmonicPoints(
-      {
-        x: window[0].price,
-        a: window[1].price,
-        b: window[2].price,
-        c: window[3].price,
-        d: window[4].price,
-      },
-      direction,
-      "completed"
-    );
-    if (!evaluation) continue;
+  for (const scale of scales) {
+    const pivots = findPivots(candles, scale);
+    if (pivots.length < 4) continue;
 
-    const dPrice = window[4].price;
-    const invalidation =
-      direction === "bullish" ? dPrice * 0.995 : dPrice * 1.005;
-    if (
-      direction === "bullish"
-        ? currentPrice <= invalidation
-        : currentPrice >= invalidation
-    ) {
-      continue;
-    }
+    for (let end = 4; end < pivots.length; end += 1) {
+      const window = pivots.slice(end - 4, end + 1);
+      if (!alternates(window)) continue;
 
-    const distancePct = distanceToZone(currentPrice, evaluation.prz, direction);
-    if (Math.abs(distancePct) > config.maxDistancePct) continue;
-
-    pushMatch(
-      buildMatch({
-        symbol: options.symbol,
-        timeframe: options.timeframe,
-        direction,
-        status: "completed",
-        window,
-        evaluation,
-        currentPrice,
-        rsi,
-        now,
-      })
-    );
-  }
-
-  if (options.includeForming !== false && pivots.length >= 4) {
-    const window = pivots.slice(-4);
-    if (alternates(window)) {
       const direction: HarmonicDirection =
         window[0].type === "low" ? "bullish" : "bearish";
-      const sign = direction === "bullish" ? 1 : -1;
-      const x = window[0].price * sign;
-      const a = window[1].price * sign;
-      const projectedD = a - (a - x) * 0.886;
       const evaluation = evaluateHarmonicPoints(
         {
           x: window[0].price,
           a: window[1].price,
           b: window[2].price,
           c: window[3].price,
-          d: projectedD * sign,
+          d: window[4].price,
         },
         direction,
-        "forming"
+        "completed"
       );
+      if (!evaluation) continue;
 
-      if (evaluation) {
-        const invalidation =
-          direction === "bullish"
-            ? evaluation.prz.low * 0.995
-            : evaluation.prz.high * 1.005;
-        const broken =
-          direction === "bullish"
-            ? currentPrice <= invalidation
-            : currentPrice >= invalidation;
-        const distancePct = distanceToZone(currentPrice, evaluation.prz, direction);
+      const dPrice = window[4].price;
+      const invalidation =
+        direction === "bullish" ? dPrice * 0.995 : dPrice * 1.005;
+      if (
+        direction === "bullish"
+          ? currentPrice <= invalidation
+          : currentPrice >= invalidation
+      ) {
+        continue;
+      }
 
-        if (!broken && Math.abs(distancePct) <= config.maxDistancePct) {
-          pushMatch(
-            buildMatch({
-              symbol: options.symbol,
-              timeframe: options.timeframe,
-              direction,
-              status: "forming",
-              window: [
-                ...window,
-                {
-                  index: window[3].index,
-                  date: candles[candles.length - 1].date,
-                  price: evaluation.prz.low,
-                  type: direction === "bullish" ? "low" : "high",
-                },
-              ],
-              evaluation,
-              currentPrice,
-              rsi,
-              now,
-            })
+      const distancePct = distanceToZone(currentPrice, evaluation.prz, direction);
+      if (Math.abs(distancePct) > config.maxDistancePct) continue;
+
+      pushMatch(
+        buildMatch({
+          symbol: options.symbol,
+          timeframe: options.timeframe,
+          direction,
+          status: "completed",
+          window,
+          evaluation,
+          currentPrice,
+          rsi,
+          now,
+        })
+      );
+    }
+
+    if (options.includeForming !== false) {
+      const window = pivots.slice(-4);
+      if (alternates(window)) {
+        const direction: HarmonicDirection =
+          window[0].type === "low" ? "bullish" : "bearish";
+        const sign = direction === "bullish" ? 1 : -1;
+        const x = window[0].price * sign;
+        const a = window[1].price * sign;
+        const projectedD = a - (a - x) * 0.886;
+        const evaluation = evaluateHarmonicPoints(
+          {
+            x: window[0].price,
+            a: window[1].price,
+            b: window[2].price,
+            c: window[3].price,
+            d: projectedD * sign,
+          },
+          direction,
+          "forming"
+        );
+
+        if (evaluation) {
+          const invalidation =
+            direction === "bullish"
+              ? evaluation.prz.low * 0.995
+              : evaluation.prz.high * 1.005;
+          const broken =
+            direction === "bullish"
+              ? currentPrice <= invalidation
+              : currentPrice >= invalidation;
+          const distancePct = distanceToZone(
+            currentPrice,
+            evaluation.prz,
+            direction
           );
+
+          if (!broken && Math.abs(distancePct) <= config.maxDistancePct) {
+            pushMatch(
+              buildMatch({
+                symbol: options.symbol,
+                timeframe: options.timeframe,
+                direction,
+                status: "forming",
+                window: [
+                  ...window,
+                  {
+                    index: window[3].index,
+                    date: candles[candles.length - 1].date,
+                    price: evaluation.prz.low,
+                    type: direction === "bullish" ? "low" : "high",
+                  },
+                ],
+                evaluation,
+                currentPrice,
+                rsi,
+                now,
+              })
+            );
+          }
         }
       }
     }

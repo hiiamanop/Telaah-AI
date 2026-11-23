@@ -20,8 +20,8 @@
 - [x] Write Telegram + harmonic brief design and implementation plan <!-- id=18 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Build multi-timeframe harmonic detector with tests <!-- id=19 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Add Yahoo intraday data and timeframe aggregation <!-- id=20 priority=high done=2026-11-23 created=2026-11-23 -->
-- [•] Build liquid-IDX harmonic screener, ranking, and cache <!-- id=21 priority=high created=2026-11-23 -->
-- [ ] Build owner-only Telegram bot: client, webhook, chat handler <!-- id=22 priority=high created=2026-11-23 -->
+- [x] Build liquid-IDX harmonic screener, ranking, and cache <!-- id=21 priority=high done=2026-11-23 created=2026-11-23 -->
+- [•] Build owner-only Telegram bot: client, webhook, chat handler <!-- id=22 priority=high created=2026-11-23 -->
 - [ ] Add harmonic brief API, scheduler script, and setup tooling <!-- id=23 priority=high created=2026-11-23 -->
 - [ ] Update docs/env/Podman deployment for Telegram brief <!-- id=24 priority=medium created=2026-11-23 -->
 - [ ] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high created=2026-11-23 -->

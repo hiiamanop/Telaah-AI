@@ -90,7 +90,37 @@ Kalau domain masih `525`:
 - pastikan public hostname tunnel memakai `http://localhost:3000`, bukan `https://`;
 - cek DNS `hiiamanop.my.id` sudah proxied ke tunnel, bukan A record ke IP rumah.
 
-## 5. Catatan
+## 5. Pakai subdomain (telaah.hiiamanop.my.id)
+
+Aplikasi tidak menyimpan domain di kode, jadi cukup tambahkan public hostname baru di tunnel:
+
+```text
+Subdomain : telaah
+Domain    : hiiamanop.my.id
+Path      : (kosong)
+Service   : HTTP
+URL       : localhost:3000
+```
+
+Cloudflare akan membuat CNAME `telaah.hiiamanop.my.id` ke tunnel secara otomatis. Tidak perlu restart container; cloudflared mengambil konfigurasi baru sendiri.
+
+Kalau mau **hanya** subdomain yang aktif, hapus public hostname root `hiiamanop.my.id` dari tunnel. Kalau root ingin tetap mengarah ke aplikasi, biarkan keduanya.
+
+Opsional, buat redirect root ke subdomain lewat Cloudflare **Rules → Redirect Rules**:
+
+```text
+Jika hostname = hiiamanop.my.id
+Maka redirect 301 ke https://telaah.hiiamanop.my.id/$1
+```
+
+Tes:
+
+```bash
+curl -I https://telaah.hiiamanop.my.id
+curl -sS https://telaah.hiiamanop.my.id/api/market-overview | head
+```
+
+## 6. Catatan
 
 - PC harus menyala dan Podman berjalan selama aplikasi dipakai.
 - Qdrant/Redis tidak wajib. Tanpa Qdrant, semantic cache dilewati; tanpa Redis, cache memori lokal dipakai.

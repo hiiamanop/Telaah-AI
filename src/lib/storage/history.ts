@@ -21,6 +21,8 @@ export interface SavedReportItem {
 const HISTORY_STORAGE_KEY = "telaah360_history_v2";
 const REPORT_CACHE_KEY_PREFIX = "telaah360_cache_rep_";
 const WATCHLIST_STORAGE_KEY = "telaah360_watchlist_v2";
+const WATCHLIST_MIGRATION_KEY = "telaah360_watchlist_default_removed_v1";
+const LEGACY_DEFAULT_WATCHLIST = ["BBCA", "ADRO", "BBRI"];
 const MAX_HISTORY_ITEMS = 15;
 
 /**
@@ -47,9 +49,24 @@ export function getWatchlistSymbols(): string[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : ["BBCA", "ADRO", "BBRI"];
+    let list: string[] = raw ? JSON.parse(raw) : [];
+
+    if (localStorage.getItem(WATCHLIST_MIGRATION_KEY) !== "1") {
+      const isLegacyDefault =
+        Array.isArray(list) &&
+        list.length === LEGACY_DEFAULT_WATCHLIST.length &&
+        LEGACY_DEFAULT_WATCHLIST.every((symbol, index) => list[index] === symbol);
+
+      if (isLegacyDefault) {
+        list = [];
+        localStorage.removeItem(WATCHLIST_STORAGE_KEY);
+      }
+      localStorage.setItem(WATCHLIST_MIGRATION_KEY, "1");
+    }
+
+    return Array.isArray(list) ? list : [];
   } catch {
-    return ["BBCA", "ADRO", "BBRI"];
+    return [];
   }
 }
 

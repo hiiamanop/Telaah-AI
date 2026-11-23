@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { REPORT_DATA_VERSION } from "@/lib/agent/types";
-import { getReportFromCache, isReportCacheCompatible } from "../history";
+import {
+  getReportFromCache,
+  getWatchlistSymbols,
+  isReportCacheCompatible,
+} from "../history";
 
 const store = new Map<string, string>();
 
@@ -11,6 +15,22 @@ beforeEach(() => {
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => store.set(key, value),
     removeItem: (key: string) => store.delete(key),
+  });
+});
+
+describe("watchlist defaults", () => {
+  it("removes the legacy BBCA/ADRO/BBRI default once", () => {
+    localStorage.setItem(
+      "telaah360_watchlist_v2",
+      JSON.stringify(["BBCA", "ADRO", "BBRI"])
+    );
+    expect(getWatchlistSymbols()).toEqual([]);
+    expect(localStorage.getItem("telaah360_watchlist_v2")).toBeNull();
+  });
+
+  it("keeps a user's custom watchlist", () => {
+    localStorage.setItem("telaah360_watchlist_v2", JSON.stringify(["TLKM"]));
+    expect(getWatchlistSymbols()).toEqual(["TLKM"]);
   });
 });
 

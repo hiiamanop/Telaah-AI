@@ -1110,7 +1110,7 @@ export default function Home() {
                   Terminal Saham Siap Digunakan
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                  Ketik kode emiten atau ajukan pertanyaan di search bar di atas, atau klik salah satu saham acuan (BBCA, ADRO, BBRI) untuk memulai riset.
+                  Ketik kode emiten atau ajukan pertanyaan di search bar di atas untuk memulai riset.
                 </p>
               </div>
             </div>

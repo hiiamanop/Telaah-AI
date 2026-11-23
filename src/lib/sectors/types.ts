@@ -45,6 +45,10 @@ export interface ValuationData {
   current_pe?: number | null;
   current_pb?: number | null;
   current_ps?: number | null;
+  /** Statement currency Yahoo reports the financials in (e.g. "USD" for ADRO). */
+  financialCurrency?: string;
+  /** "reported" when the multiples come as-is from the provider, "computed" when derived from IDR-normalized financials. */
+  multipleBasis?: "reported" | "computed";
   historical_valuation?: HistoricalValuationYear[] | {
     pe?: {
       current?: number;
@@ -129,9 +133,9 @@ export interface PeerCompany {
   market_cap: number;
   pe?: number;
   pe_ttm?: number;
-  pb?: number;
-  pb_mrq?: number;
-  ps?: number;
+  pb?: number | null;
+  pb_mrq?: number | null;
+  ps?: number | null;
   dividend_yield?: number;
   close?: number;
   daily_change?: number;
@@ -197,6 +201,16 @@ export interface ManagementData {
     shares?: number;
   }>;
 }
+
+export type CompanyReportSection =
+  | "overview"
+  | "valuation"
+  | "financials"
+  | "peers"
+  | "ownership"
+  | "management"
+  | "dividend"
+  | "future";
 
 export interface CompanyReport {
   symbol: string;

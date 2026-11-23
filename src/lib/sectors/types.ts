@@ -259,11 +259,15 @@ export interface BrokerSummaryResponse {
   start?: string;
   end?: string;
   data: DailyBrokerSummary[];
+  source?: "stockbit" | "ipot";
+  coverage?: "full" | "top10";
 }
 
 export interface ForeignFlowItem {
   date: string;
   net_foreign_inflow: number;
+  net_foreign_shares?: number;
+  close?: number;
 }
 
 export interface ForeignFlowResponse {
@@ -298,6 +302,17 @@ export interface FilingItem {
   body?: string;
   symbol?: string;
   category?: string;
+  holder_name?: string;
+  holder_type?: "insider" | "major_holder" | string;
+  transaction_type?: "buy" | "sell" | "transfer" | "neutral" | string;
+  amount_transaction?: number;
+  price?: number;
+  transaction_value?: number;
+  share_percentage_before?: number;
+  share_percentage_after?: number;
+  attachment_url?: string;
+  source?: string;
+  unparsed?: boolean;
 }
 
 export interface NewsItem {

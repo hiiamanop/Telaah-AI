@@ -343,37 +343,10 @@ export class YahooClient {
     return [...this.callLog];
   }
 
-  /**
-   * Daily OHLCV, split-adjusted so bars before a split line up with bars after
-   * it. Yahoo returns splits as events keyed by the split's unix timestamp.
-   */
-  public async getDailyTransactions(
-    symbol: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<DailyTransaction[]> {
-    const yahooSymbol = toYahooSymbol(symbol);
-    if (!yahooSymbol) {
-      throw new MarketDataError("Simbol emiten kosong.", "yahoo", "config");
-    }
-    const idSymbol = yahooSymbol.startsWith("^")
-      ? yahooSymbol
-      : yahooSymbol.replace(/\.JK$/, "");
-
-    const nowSeconds = Math.floor(this.now() / 1000);
-    const period1 =
-      startDate !== undefined
-        ? parseDateArg(startDate, false)
-        : nowSeconds - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60;
-    const period2 =
-      endDate !== undefined ? parseDateArg(endDate, true) : nowSeconds;
-
-    const params = {
-      period1: String(period1),
-      period2: String(period2),
-      interval: "1d",
-      events: "split",
-    };
+  private async fetchChartResult(
+    yahooSymbol: string,
+    params: Record<string, string>
+  ): Promise<ChartResult> {
     const endpoint = `/v8/finance/chart/${yahooSymbol}`;
     const url = `${CHART_BASE}/${encodeURIComponent(yahooSymbol)}?${new URLSearchParams(params).toString()}`;
 
@@ -426,12 +399,20 @@ export class YahooClient {
       );
     }
 
+    return result;
+  }
+
+  private mapChartRows(
+    result: ChartResult,
+    idSymbol: string,
+    intraday: boolean
+  ): DailyTransaction[] {
     const timestamps = result.timestamp ?? [];
     const quote = result.indicators?.quote?.[0];
     if (timestamps.length === 0) return [];
     if (!quote) {
       throw new MarketDataError(
-        `Yahoo chart tidak menyertakan data OHLCV untuk ${yahooSymbol}.`,
+        `Yahoo chart tidak menyertakan data OHLCV untuk ${idSymbol}.`,
         "yahoo",
         "provider"
       );
@@ -464,7 +445,9 @@ export class YahooClient {
 
       rows.push({
         symbol: idSymbol,
-        date: jakartaDate(timestamp),
+        date: intraday
+          ? new Date(timestamp * 1000).toISOString()
+          : jakartaDate(timestamp),
         open: open * priceFactor,
         high: high * priceFactor,
         low: low * priceFactor,
@@ -474,6 +457,62 @@ export class YahooClient {
     }
 
     return rows.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /**
+   * Daily OHLCV, split-adjusted so bars before a split line up with bars after
+   * it. Yahoo returns splits as events keyed by the split's unix timestamp.
+   */
+  public async getDailyTransactions(
+    symbol: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<DailyTransaction[]> {
+    const yahooSymbol = toYahooSymbol(symbol);
+    if (!yahooSymbol) {
+      throw new MarketDataError("Simbol emiten kosong.", "yahoo", "config");
+    }
+    const idSymbol = stripJakartaSuffix(yahooSymbol);
+
+    const nowSeconds = Math.floor(this.now() / 1000);
+    const period1 =
+      startDate !== undefined
+        ? parseDateArg(startDate, false)
+        : nowSeconds - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60;
+    const period2 =
+      endDate !== undefined ? parseDateArg(endDate, true) : nowSeconds;
+
+    const result = await this.fetchChartResult(yahooSymbol, {
+      period1: String(period1),
+      period2: String(period2),
+      interval: "1d",
+      events: "split",
+    });
+
+    return this.mapChartRows(result, idSymbol, false);
+  }
+
+  /**
+   * Hourly OHLCV for the 4H screener. Split-adjusted like the daily series so
+   * a corporate action inside the window does not create a fake gap.
+   */
+  public async getHourlyTransactions(
+    symbol: string,
+    range: string = "6mo"
+  ): Promise<DailyTransaction[]> {
+    const yahooSymbol = toYahooSymbol(symbol);
+    if (!yahooSymbol) {
+      throw new MarketDataError("Simbol emiten kosong.", "yahoo", "config");
+    }
+    const idSymbol = stripJakartaSuffix(yahooSymbol);
+
+    const result = await this.fetchChartResult(yahooSymbol, {
+      range,
+      interval: "1h",
+      events: "split",
+    });
+
+    return this.mapChartRows(result, idSymbol, true);
   }
 
   /**

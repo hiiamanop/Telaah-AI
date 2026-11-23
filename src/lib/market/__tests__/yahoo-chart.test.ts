@@ -29,6 +29,17 @@ describe("YahooClient.getDailyTransactions", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("events=split");
   });
 
+  it("maps hourly rows with full ISO timestamps", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(chartBody), { status: 200 })
+    );
+    const client = new YahooClient({ fetchImpl: fetchMock });
+    const rows = await client.getHourlyTransactions("BBCA");
+    expect(rows[0].date).toContain("T");
+    expect(fetchMock.mock.calls[0][0]).toContain("interval=1h");
+    expect(fetchMock.mock.calls[0][0]).toContain("range=6mo");
+  });
+
   it("throws MarketDataError when Yahoo returns no result", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ chart: { result: null, error: { code: "Not Found" } } }), { status: 200 }));
     const client = new YahooClient({ fetchImpl: fetchMock });

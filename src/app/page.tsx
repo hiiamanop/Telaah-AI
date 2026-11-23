@@ -138,7 +138,7 @@ export default function Home() {
   ]);
   const [marketAsOfDate, setMarketAsOfDate] = useState<string>("");
 
-  // Fetch live market overview from Sectors API on mount & poll every 1 hour
+  // Fetch live market overview from the open market data source on mount & poll every 1 hour
   useEffect(() => {
     const fetchMarket = () => {
       fetch("/api/market-overview")
@@ -913,7 +913,7 @@ export default function Home() {
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-zinc-300 bg-zinc-500/15 px-2 py-0.5 rounded">
-                  Sectors v2 Engine
+                  Open Data Engine
                 </span>
               </div>
               <p className="text-slate-300 text-xs pl-7.5">

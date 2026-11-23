@@ -36,7 +36,7 @@ DATA RINGKAS:
 • Top Net Buyer: ${report.flowLens?.topBuyers?.[0]?.code || "-"}
 • Top Net Seller: ${report.flowLens?.topSellers?.[0]?.code || "-"}
 
-Catatan: Data bersumber dari Sectors API v2. Edukasi/Riset, bukan rekomendasi investasi. Dihasilkan via Telaah 360.`;
+Catatan: Data publik Yahoo Finance + IDX. Edukasi/Riset, bukan rekomendasi investasi. Dihasilkan via Telaah 360.`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareText);

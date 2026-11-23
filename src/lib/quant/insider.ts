@@ -95,7 +95,7 @@ export function analyzeInsiderCluster(
     const body = f.body || "";
     const combined = `${title} ${body}`.toLowerCase();
 
-    // Deteksi aksi: BUY, SELL, TRANSFER (utamakan data terstruktur dari Sectors API)
+    // Deteksi aksi: BUY, SELL, TRANSFER (utamakan data terstruktur dari filings)
     let action: "BUY" | "SELL" | "TRANSFER" | "NEUTRAL" = "NEUTRAL";
     if (f.transaction_type) {
       const tt = String(f.transaction_type).toLowerCase();

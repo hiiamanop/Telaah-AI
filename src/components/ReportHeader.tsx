@@ -366,7 +366,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
             <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-sans">
               <span>{t("metric.actionAudit", "Aksi & Audit")}</span>
               <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                {report.fromVectorCache ? "0 cr" : `${report.creditsConsumed} cr`}
+                {report.fromVectorCache ? "cache" : "Open Data"}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 pt-1">

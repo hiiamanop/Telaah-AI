@@ -78,7 +78,7 @@ Manual:
 Cron host pada 08:00 WIB:
 
 ```cron
-0 8 * * * cd /home/ahmad/workspace/Telaah-AI && ./deploy/podman/brief.sh >> data/brief.log 2>&1
+0 8 * * * cd /home/ahmad/workspace/Telaah-AI && ./deploy/podman/brief.sh refresh >> data/brief.log 2>&1
 ```
 
 Cron memanggil `127.0.0.1:3000` langsung, jadi tidak terkena batas timeout Cloudflare. Hentikan semuanya dengan `./deploy/podman/stop.sh`; tidak ada service yang tertinggal.

@@ -441,10 +441,14 @@ function buildMatch(params: {
     status === "completed"
       ? window[4].price
       : (evaluation.prz.low + evaluation.prz.high) / 2;
+  const invalidationBase =
+    direction === "bullish"
+      ? Math.min(dPrice, evaluation.prz.low)
+      : Math.max(dPrice, evaluation.prz.high);
   const invalidation =
     direction === "bullish"
-      ? (status === "completed" ? dPrice * 0.995 : evaluation.prz.low * 0.995)
-      : (status === "completed" ? dPrice * 1.005 : evaluation.prz.high * 1.005);
+      ? invalidationBase * 0.995
+      : invalidationBase * 1.005;
   const distancePct = distanceToZone(currentPrice, evaluation.prz, direction);
 
   const risk =

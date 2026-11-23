@@ -5,6 +5,7 @@ import {
   aggregateToMonthly,
   aggregateToWeekly,
   buildTimeframeCandles,
+  mergeHourlyIntoDaily,
 } from "../timeframes";
 
 function row(
@@ -86,6 +87,38 @@ describe("aggregateToFourHour", () => {
       volume: 70,
     });
     expect(fourHour[2].date).toBe("2026-01-06T03:00:00.000Z");
+  });
+});
+
+describe("mergeHourlyIntoDaily", () => {
+  it("appends a newer Jakarta session that the daily feed has not published yet", () => {
+    const merged = mergeHourlyIntoDaily(
+      [row("2026-11-20", 100, 110, 95, 105, 10)],
+      [
+        row("2026-11-23T03:00:00.000Z", 105, 108, 104, 106, 5),
+        row("2026-11-23T04:00:00.000Z", 106, 109, 105, 108, 7),
+        row("2026-11-23T06:00:00.000Z", 108, 110, 107, 109, 8),
+      ]
+    );
+    expect(merged).toHaveLength(2);
+    expect(merged[1]).toEqual({
+      symbol: "TEST",
+      date: "2026-11-23",
+      open: 105,
+      high: 110,
+      low: 104,
+      close: 109,
+      volume: 20,
+    });
+  });
+
+  it("does not replace a daily candle that already exists", () => {
+    const merged = mergeHourlyIntoDaily(
+      [row("2026-11-23", 90, 95, 88, 94, 100)],
+      [row("2026-11-23T03:00:00.000Z", 105, 108, 104, 106, 5)]
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0].close).toBe(94);
   });
 });
 

@@ -7,7 +7,11 @@ import {
   type HarmonicTimeframe,
 } from "@/lib/quant/harmonic";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
-import { buildTimeframeCandles } from "@/lib/market/timeframes";
+import {
+  aggregateHourlyToDaily,
+  buildTimeframeCandles,
+  mergeHourlyIntoDaily,
+} from "@/lib/market/timeframes";
 import { YahooClient } from "@/lib/market/yahoo";
 import type { DailyTransaction } from "@/lib/sectors/types";
 import { LIQUID_IDX_UNIVERSE } from "./universe";
@@ -132,11 +136,17 @@ async function scanSymbol(
     return { candidate: null, failed: true };
   }
 
+  const mergedDaily = daily
+    ? mergeHourlyIntoDaily(daily, hourly ?? [])
+    : hourly
+      ? aggregateHourlyToDaily(hourly)
+      : null;
+
   const frames: Array<{ timeframe: HarmonicTimeframe; rows: DailyTransaction[] | null }> = [
     { timeframe: "4H", rows: hourly },
-    { timeframe: "1D", rows: daily },
-    { timeframe: "1W", rows: daily },
-    { timeframe: "1M", rows: daily },
+    { timeframe: "1D", rows: mergedDaily },
+    { timeframe: "1W", rows: mergedDaily },
+    { timeframe: "1M", rows: mergedDaily },
   ];
 
   const matches: HarmonicMatch[] = [];

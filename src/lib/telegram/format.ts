@@ -149,6 +149,7 @@ export function formatBriefMessage(scan: HarmonicScanResult): string {
 
   lines.push(
     "PRZ = Potential Reversal Zone. Pola harmonic tidak menjamin reversal; selalu pasang rencana invalidasi.",
+    "Harga memakai close Yahoo terakhir; chart TradingView bisa memakai feed yang sedikit berbeda.",
     "Data Yahoo dapat tertunda. Bukan rekomendasi beli/jual."
   );
 

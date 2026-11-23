@@ -114,7 +114,7 @@ describe("detectHarmonicPatterns", () => {
     );
     expect(gartley).toBeDefined();
     expect(gartley?.distancePct).toBe(0);
-    expect(gartley?.invalidation).toBeLessThan(121.4);
+    expect(gartley?.invalidation).toBeLessThan(gartley?.prz.low ?? 0);
     expect(gartley?.score).toBeGreaterThan(60);
   });
 

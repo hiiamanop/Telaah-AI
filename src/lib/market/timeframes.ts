@@ -61,12 +61,18 @@ const JAKARTA_PARTS = new Intl.DateTimeFormat("en-CA", {
   hour12: false,
 });
 
-function jakartaSessionKey(date: string): string {
+function jakartaParts(date: string): { day: string; hour: number } {
   const parts = JAKARTA_PARTS.formatToParts(new Date(date));
   const pick = (type: string) =>
     parts.find((part) => part.type === type)?.value ?? "";
-  const day = `${pick("year")}-${pick("month")}-${pick("day")}`;
-  const hour = Number(pick("hour"));
+  return {
+    day: `${pick("year")}-${pick("month")}-${pick("day")}`,
+    hour: Number(pick("hour")),
+  };
+}
+
+function jakartaSessionKey(date: string): string {
+  const { day, hour } = jakartaParts(date);
   return `${day}-${hour < 12 ? "AM" : "PM"}`;
 }
 
@@ -77,6 +83,54 @@ function jakartaSessionKey(date: string): string {
  */
 export function aggregateToFourHour(rows: DailyTransaction[]): HarmonicCandle[] {
   return aggregateByKey(rows, (row) => jakartaSessionKey(row.date));
+}
+
+/**
+ * Yahoo's daily chart can lag the hourly feed by one session. Aggregating the
+ * hourly bars gives a daily candle for that missing session, so the brief's
+ * price and the chart agree.
+ */
+export function aggregateHourlyToDaily(
+  rows: DailyTransaction[]
+): DailyTransaction[] {
+  const groups = new Map<string, DailyTransaction>();
+
+  for (const row of rows) {
+    const date = jakartaParts(row.date).day;
+    const current = groups.get(date);
+    if (!current) {
+      groups.set(date, { ...row, date });
+      continue;
+    }
+    current.high = Math.max(current.high, row.high);
+    current.low = Math.min(current.low, row.low);
+    current.close = row.close;
+    current.volume += row.volume;
+  }
+
+  return [...groups.values()].sort((left, right) =>
+    left.date.localeCompare(right.date)
+  );
+}
+
+/**
+ * Only newer sessions are appended. An existing daily candle is kept because
+ * it is the more complete/authoritative bar for that date.
+ */
+export function mergeHourlyIntoDaily(
+  daily: DailyTransaction[],
+  hourly: DailyTransaction[]
+): DailyTransaction[] {
+  const sortedDaily = [...daily].sort((left, right) =>
+    left.date.localeCompare(right.date)
+  );
+  if (sortedDaily.length === 0) return aggregateHourlyToDaily(hourly);
+
+  const lastDate = sortedDaily[sortedDaily.length - 1].date;
+  const newer = aggregateHourlyToDaily(hourly).filter(
+    (row) => row.date > lastDate
+  );
+  return [...sortedDaily, ...newer];
 }
 
 export function buildTimeframeCandles(

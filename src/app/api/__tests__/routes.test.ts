@@ -86,7 +86,7 @@ describe("open-market API routes", () => {
       }) as any
     );
     const body = await response.json();
-    expect(body.assistantMessage).toContain("tidak bisa mengikuti");
+    expect(body.assistantMessage).toContain("nggak bisa aku ikuti");
   });
 
   it("rejects an incomplete report instead of crashing the QA route", async () => {

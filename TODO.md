@@ -16,4 +16,12 @@
 - [x] Task 12: API routes + market cache + commodity page <!-- id=14 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Task 13: Branding, docs, env, deployment notes <!-- id=15 priority=medium done=2026-11-23 created=2026-11-23 -->
 - [x] Task 14: Smoke test, lint, build, manual verification <!-- id=16 priority=high done=2026-11-23 created=2026-11-23 -->
-- [ ] Write Phase 2 plan after Phase 1 verification <!-- id=17 priority=medium created=2026-11-23 -->
+- [x] Write Phase 2 plan after Phase 1 verification <!-- id=17 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Write Telegram + harmonic brief design and implementation plan <!-- id=18 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Build multi-timeframe harmonic detector with tests <!-- id=19 priority=high done=2026-11-23 created=2026-11-23 -->
+- [•] Add Yahoo intraday data and timeframe aggregation <!-- id=20 priority=high created=2026-11-23 -->
+- [ ] Build liquid-IDX harmonic screener, ranking, and cache <!-- id=21 priority=high created=2026-11-23 -->
+- [ ] Build owner-only Telegram bot: client, webhook, chat handler <!-- id=22 priority=high created=2026-11-23 -->
+- [ ] Add harmonic brief API, scheduler script, and setup tooling <!-- id=23 priority=high created=2026-11-23 -->
+- [ ] Update docs/env/Podman deployment for Telegram brief <!-- id=24 priority=medium created=2026-11-23 -->
+- [ ] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high created=2026-11-23 -->

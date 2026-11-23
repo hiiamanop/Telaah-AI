@@ -63,41 +63,43 @@ export function detectConversationalIntent(text: string): ConversationalIntent |
 
 export function conversationalReply(intent: ConversationalIntent): string {
   if (intent === "thanks") {
-    return "Sama-sama. Kalau mau lanjut, sebutkan kode saham IDX (contoh: **BBCA**, **TLKM**, **ANTM**) atau nama perusahaannya.";
+    return "Sama-sama! 😊 Kalau mau lanjut, tinggal sebutkan kode sahamnya, ya — misalnya **BBCA**, **TLKM**, atau **ANTM**.";
   }
   if (intent === "capabilities") {
     return [
-      "Saya **Telaah 360**, asisten riset emiten IDX berbasis data pasar publik.",
+      "Tentu, aku **Telaah 360** — teman riset emiten IDX kamu.",
       "",
-      "Yang bisa saya bantu:",
+      "Yang bisa aku bantu:",
       "- ringkasan fundamental & laporan kuartalan",
       "- valuasi (PER/PBV), peers, dan profil emiten",
       "- teknikal (tren, RSI, SMA, support/resistance)",
       "- foreign flow dan insider filings bila tersedia",
       "- trading plan probabilistik dan audit bukti",
       "",
-      "Sebutkan kode saham atau nama perusahaan untuk mulai, misalnya: **Analisis BBCA**.",
+      "Mau mulai dari emiten mana? Tulis kode saham atau nama perusahaannya, ya. Contoh: **Analisis BBCA**.",
     ].join("\n");
   }
   return [
-    "Halo! Saya **Telaah 360**, asisten riset emiten IDX.",
+    "Halo! 👋 Senang ketemu kamu. Aku **Telaah 360**, teman riset saham IDX kamu.",
     "",
-    "Sebutkan kode saham atau nama perusahaan yang ingin ditelaah — misalnya **BBCA**, **TLKM**, atau **ANTM**.",
-    "Saya bisa bantu fundamental, valuasi, teknikal, flow, insider, dan trading plan. Bukan rekomendasi beli/jual.",
+    "Mau mulai dari emiten mana? Tulis kode saham atau nama perusahaannya, ya — misalnya **BBCA**, **TLKM**, atau **ANTM**.",
+    "Aku bisa bantu fundamental, valuasi, teknikal, flow, insider, dan trading plan. Kalau soal sektor, sebutkan emiten yang mau dibandingkan, nanti aku ambil datanya.",
+    "",
+    "Tenang, ini untuk riset dan edukasi — bukan rekomendasi beli/jual.",
   ].join("\n");
 }
 
 export const NO_SYMBOL_MESSAGE = [
-  "Saya belum menemukan kode saham IDX yang valid dalam pesan itu.",
+  "Hmm, sepertinya aku belum menangkap kode sahamnya. 😊",
   "",
-  "Coba sebutkan **kode 4 huruf** atau nama perusahaannya, contoh:",
+  "Coba tulis **kode 4 huruf** atau nama perusahaannya, ya. Contohnya:",
   "- `Analisis BBCA`",
-  "- `Bagaimana valuasi TLKM?`",
+  "- `Gimana valuasi TLKM?`",
   "- `Bandingkan ANTM vs INCO`",
   "",
-  "Kalau kamu bertanya tentang sektor, sebutkan emiten yang ingin dibandingkan agar saya bisa mengambil data yang tepat.",
+  "Kalau pertanyaannya soal sektor atau ide saham, sebutkan emiten yang mau kamu bandingkan — nanti aku ambil data yang tepat.",
 ].join("\n");
 
 export const INJECTION_REFUSAL =
-  "Saya tidak bisa mengikuti instruksi yang mencoba mengubah aturan sistem atau membocorkan prompt. " +
-  "Saya tetap bisa membantu riset emiten IDX — sebutkan kode saham atau pertanyaan pasar yang konkret.";
+  "Waduh, itu instruksi yang mencoba mengubah aturan sistem atau membocorkan prompt — nggak bisa aku ikuti, ya. 🙏 " +
+  "Tapi aku tetap siap bantu riset emiten IDX. Sebutkan kode saham atau pertanyaan pasar yang konkret, nanti kita bahas.";

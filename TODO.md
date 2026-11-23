@@ -1,12 +1,19 @@
 # TODO
 
-- [x] Finalize and approve open-market data provider design <!-- id=1 priority=high done=2026-11-23 created=2026-11-23 -->
-- [x] Write implementation plan for Yahoo + IDX/Scrapling provider <!-- id=2 priority=high done=2026-11-23 created=2026-11-23 -->
-- [ ] Build Python Scrapling scraper service (IDX profile/foreign flow/insider/calendar, IPOT broker) <!-- id=3 priority=high created=2026-11-23 -->
-- [ ] Build Next.js market provider layer (Yahoo, scraper client, composite, commodities, news, FX) <!-- id=4 priority=high created=2026-11-23 -->
-- [ ] Wire coordinator, routes, flow/insider/integrity degradation <!-- id=5 priority=high created=2026-11-23 -->
-- [ ] Version semantic/local caches and update report metadata <!-- id=6 priority=medium created=2026-11-23 -->
-- [ ] Update UI branding, limitations, and data-source labels <!-- id=7 priority=medium created=2026-11-23 -->
-- [ ] Update deployment, env, README, and API docs <!-- id=8 priority=medium created=2026-11-23 -->
-- [ ] Run tests, lint, build, and live smoke verification <!-- id=9 priority=high created=2026-11-23 -->
-- [•] Review Phase 1 plan and choose execution method <!-- id=10 priority=high created=2026-11-23 -->
+- [x] Approve open-market data design <!-- id=1 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Write Phase 1 implementation plan <!-- id=2 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 1: Vitest harness + FX module <!-- id=3 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 2: Yahoo daily OHLCV + split adjustment <!-- id=4 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 3: Yahoo quarterly financials + USD/IDR <!-- id=5 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 4: Yahoo quoteSummary, valuation, peers, corporate actions <!-- id=6 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 5: Google News RSS, indices, commodities <!-- id=7 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 6: MarketDataProvider + OpenMarketProvider + factory <!-- id=8 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 7: Capability-aware coordinator + limitations <!-- id=9 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 8: FlowLens partial/coverage <!-- id=10 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 9: Insider unavailable + remove seed data <!-- id=11 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 10: Integrity confidence, trading plan, compare/watchlist N/A <!-- id=12 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 11: Cache versioning + report metadata <!-- id=13 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Task 12: API routes + market cache + commodity page <!-- id=14 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 13: Branding, docs, env, deployment notes <!-- id=15 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Task 14: Smoke test, lint, build, manual verification <!-- id=16 priority=high done=2026-11-23 created=2026-11-23 -->
+- [ ] Write Phase 2 plan after Phase 1 verification <!-- id=17 priority=medium created=2026-11-23 -->

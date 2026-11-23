@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SectorsClient } from "@/lib/sectors/client";
+import { getMarketProvider } from "@/lib/market";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = new SectorsClient();
+    const client = getMarketProvider();
     const ninetyDaysAgo = new Date(Date.now() - 95 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // Fetch data in parallel for both tickers
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
 
     const repA = reportA.status === "fulfilled" ? reportA.value : null;
     const repB = reportB.status === "fulfilled" ? reportB.value : null;
-    const txA = dailyA.status === "fulfilled" ? dailyA.value : [];
-    const txB = dailyB.status === "fulfilled" ? dailyB.value : [];
+    const txA = dailyA.status === "fulfilled" ? (dailyA.value || []) : [];
+    const txB = dailyB.status === "fulfilled" ? (dailyB.value || []) : [];
     const fA = flowA.status === "fulfilled" ? flowA.value : [];
     const fB = flowB.status === "fulfilled" ? flowB.value : [];
 

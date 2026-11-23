@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SectorsClient } from "@/lib/sectors/client";
+import { getMarketProvider } from "@/lib/market";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { getCompanyName } from "@/lib/sectors/companies";
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     // Limit batch to max 25 symbols at once for performance
     const targetSymbols = symbols.slice(0, 25).map((s: string) => s.toUpperCase().trim());
-    const client = new SectorsClient();
+    const client = getMarketProvider();
 
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 

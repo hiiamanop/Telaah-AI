@@ -67,7 +67,7 @@ ATURAN ISOLASI KONTEKS & GROUNDING:
       });
     } else {
       // Fallback ringkasan edukatif berbasis data laporan langsung
-      answer = `**Berdasarkan data resmi Sectors API untuk ${report.symbol} (${report.companyName})**:\n\n` +
+      answer = `**Berdasarkan data pasar yang tersedia untuk ${report.symbol} (${report.companyName})**:\n\n` +
         `• **Ringkasan:** ${report.directAnswer}\n` +
         `• **Harga & Tren:** Rp ${report.technical.lastPrice.toLocaleString("id-ID")} (${report.technical.trendAssessment})\n` +
         `• **Foreign Flow (Asing):** ${report.flowLens.foreignFlow.recentTrend}\n\n` +

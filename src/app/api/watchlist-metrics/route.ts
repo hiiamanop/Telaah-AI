@@ -36,10 +36,15 @@ export async function POST(req: Request) {
           const dailyChangePct = tech?.dailyReturnPct ?? (multiples.dailyChange ? multiples.dailyChange * 100 : 0);
 
           // Calculate 5-day foreign flow
-          let flow5d = 0;
-          if (flowData && Array.isArray(flowData)) {
-            const recent = flowData.slice(-5);
-            flow5d = recent.reduce((sum, r) => sum + (r.net_foreign_buy || 0), 0);
+          let flow5d: number | null = null;
+          const flowItems = Array.isArray(flowData)
+            ? flowData
+            : Array.isArray((flowData as any)?.data)
+              ? (flowData as any).data
+              : [];
+          if (flowItems.length > 0) {
+            const recent = flowItems.slice(-5);
+            flow5d = recent.reduce((sum: number, r: any) => sum + (r.net_foreign_inflow || 0), 0);
           }
 
           return {
@@ -69,7 +74,7 @@ export async function POST(req: Request) {
             pb: null,
             rsi: null,
             trend: "Neutral",
-            flow5d: 0,
+            flow5d: null,
           };
         }
       })

@@ -154,6 +154,21 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
                   </button>
                 )}
 
+                {integrity && (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                      integrity.confidence === "high"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                        : integrity.confidence === "medium"
+                          ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+                          : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                    }`}
+                    title={integrity.limitations.join(" ")}
+                  >
+                    Keyakinan: {integrity.confidence === "high" ? "Tinggi" : integrity.confidence === "medium" ? "Sedang" : "Rendah"}
+                  </span>
+                )}
+
                 {/* Trading Plan Quick Badge */}
                 {report.tradingPlan && onOpenTradingPlan && (
                   <button

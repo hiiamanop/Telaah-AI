@@ -3,6 +3,14 @@ import { classifyInputAndExtractClaims } from "@/lib/agent/classifier";
 import { executeEvidencePlan } from "@/lib/agent/coordinator";
 import { synthesizeIntelligenceReport } from "@/lib/agent/synthesizer";
 import { AnalysisMode } from "@/lib/agent/types";
+import {
+  INJECTION_REFUSAL,
+  NO_SYMBOL_MESSAGE,
+  conversationalReply,
+  detectConversationalIntent,
+  looksLikePromptInjection,
+  sanitizeUserPrompt,
+} from "@/lib/agent/conversation";
 import { marketDataErrorMessage } from "@/lib/market/errors";
 import { getMarketProvider } from "@/lib/market";
 import {
@@ -14,15 +22,40 @@ import {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const prompt = body.prompt?.trim();
+    const { text: prompt, tooLong } = sanitizeUserPrompt(body.prompt);
     const mode: AnalysisMode = body.mode === "quick" ? "quick" : "full";
-    const confirmedSymbol = body.confirmedSymbol?.trim()?.toUpperCase()?.replace(".JK", "");
+    const confirmedSymbol = String(body.confirmedSymbol || "")
+      .trim()
+      .toUpperCase()
+      .replace(".JK", "");
 
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt atau teks analisis tidak boleh kosong." },
         { status: 400 }
       );
+    }
+    if (tooLong) {
+      return NextResponse.json(
+        { error: `Prompt terlalu panjang (maksimal 4000 karakter).` },
+        { status: 400 }
+      );
+    }
+    if (looksLikePromptInjection(prompt)) {
+      return NextResponse.json({
+        success: true,
+        assistantMessage: INJECTION_REFUSAL,
+        conversation: true,
+      });
+    }
+
+    const conversationalIntent = detectConversationalIntent(prompt);
+    if (conversationalIntent) {
+      return NextResponse.json({
+        success: true,
+        assistantMessage: conversationalReply(conversationalIntent),
+        conversation: true,
+      });
     }
 
     // Fast-path: Check semantic cache if confirmedSymbol is passed
@@ -62,15 +95,26 @@ export async function POST(req: NextRequest) {
     const targetSymbol = confirmedSymbol || classification.symbol;
 
     if (!targetSymbol || !/^[A-Z]{4}$/.test(targetSymbol)) {
-      return NextResponse.json(
-        {
-          needsConfirmation: true,
-          candidateSymbol: classification.symbol || "",
-          message: "Tidak dapat mendeteksi kode saham IDX 4 huruf secara pasti. Silakan konfirmasi kode saham.",
-          classification,
-        },
-        { status: 200 }
-      );
+      const candidateSymbol = String(classification.symbol || "")
+        .toUpperCase()
+        .replace(".JK", "");
+      if (/^[A-Z]{4}$/.test(candidateSymbol)) {
+        return NextResponse.json(
+          {
+            needsConfirmation: true,
+            candidateSymbol,
+            message: "Tidak dapat mendeteksi kode saham IDX 4 huruf secara pasti. Silakan konfirmasi kode saham.",
+            classification,
+          },
+          { status: 200 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        assistantMessage: NO_SYMBOL_MESSAGE,
+        conversation: true,
+        classification,
+      });
     }
 
     // Step 1b: Semantic Vector Cache Check with targetSymbol

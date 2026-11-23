@@ -637,6 +637,22 @@ export default function Home() {
         throw new Error(data.error || "Gagal melakukan telaah emiten.");
       }
 
+      if (data.assistantMessage) {
+        const botReply: ChatMessage = {
+          id: "b_" + Date.now(),
+          sender: "assistant",
+          text: data.assistantMessage,
+          timestamp: new Date().toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        const finalMsgs = [...baseMessages, botReply];
+        setMessages(finalMsgs);
+        updateActiveSession(finalMsgs, report);
+        return;
+      }
+
       if (data.needsConfirmation) {
         setNeedsConfirmation(true);
         setCandidateSymbol(data.candidateSymbol || "");

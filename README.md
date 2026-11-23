@@ -196,6 +196,19 @@ Telaah 360 bisa dipakai lewat bot Telegram pribadi:
 
 Panduan lengkap: [`docs/TELEGRAM_HARMONIC_BRIEF.md`](./docs/TELEGRAM_HARMONIC_BRIEF.md).
 
+## Phase 2: IDX Public Data
+
+Sejak Phase 2, Telaah 360 juga memakai data publik IDX melalui service scraper lokal:
+
+- **Foreign flow** harian per emiten (net asing dalam lembar dan estimasi rupiah).
+- **Profil emiten** IDX: sektor, subsektor, papan pencatatan, direksi, komisaris, pemegang saham besar.
+- **Insider/ownership filings** dari PDF keterbukaan IDX, termasuk market-wide insider feed di `/insider`.
+- **Suspensi dan kalender aksi korporasi** sebagai data pendukung.
+
+Service berjalan di container `telaah-scraper` dalam pod yang sama dan hanya listen di `127.0.0.1:8001`. Jika `SCRAPER_URL` kosong atau service mati, aplikasi tetap berjalan dengan data Yahoo dan menandai flow/insider sebagai tidak tersedia.
+
+Broker summary penuh belum aktif karena IPOT sedang 502 dan Stockbit belum dikonfigurasi; FlowLens akan menampilkan status `partial` dengan foreign flow saja. Panduan lengkap: [`docs/PHASE2_IDX_SCRAPER.md`](./docs/PHASE2_IDX_SCRAPER.md).
+
 ## Struktur Folder
 
 ```text
@@ -284,6 +297,7 @@ Data belum disinkronkan lintas browser atau akun pengguna.
 - [`docs/superpowers/specs/`](./docs/superpowers/specs/) — spesifikasi perubahan besar
 - [`docs/superpowers/plans/`](./docs/superpowers/plans/) — implementation plans
 - [`docs/TELEGRAM_HARMONIC_BRIEF.md`](./docs/TELEGRAM_HARMONIC_BRIEF.md) — operasional bot Telegram dan brief harmonic
+- [`docs/PHASE2_IDX_SCRAPER.md`](./docs/PHASE2_IDX_SCRAPER.md) — scraper IDX, foreign flow, insider PDF, dan batasan data
 
 ## Disclaimer
 

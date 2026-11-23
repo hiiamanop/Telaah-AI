@@ -21,7 +21,8 @@ interface LiveFiling {
   title: string;
   body: string;
   source: string;
-  timestamp: string;
+  date?: string;
+  timestamp?: string;
   symbol: string;
   transaction_type: string;
   holder_type: string;
@@ -43,6 +44,7 @@ export default function InsiderPage() {
   // Live OJK Filings Stream
   const [filings, setFilings] = useState<LiveFiling[]>([]);
   const [feedUnavailable, setFeedUnavailable] = useState(false);
+  const [feedSource, setFeedSource] = useState("idx");
   const [filingFilter, setFilingFilter] = useState<"all" | "buy" | "sell">("all");
   const [isLoadingFilings, setIsLoadingFilings] = useState(false);
 
@@ -61,6 +63,7 @@ export default function InsiderPage() {
       if (data.success && Array.isArray(data.filings)) {
         setFilings(data.filings);
         setFeedUnavailable(Boolean(data.unavailable));
+        setFeedSource(data.source || "idx");
       }
     } catch (err) {
       console.error("Failed to load filings feed:", err);
@@ -123,6 +126,12 @@ export default function InsiderPage() {
                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
                   OJK Stream
                 </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  IDX PDF
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                  Stockbit optional
+                </span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Pelacakan aksi beli dan jual saham oleh Direksi, Komisaris, dan Pemegang Saham Pengendali dari keterbukaan informasi bursa.
@@ -157,6 +166,9 @@ export default function InsiderPage() {
                 <FileText className="w-3.5 h-3.5 text-indigo-400" />
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
                   Live OJK Filings Feed
+                </span>
+                <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+                  {feedSource === "idx" ? "IDX PDF" : feedSource}
                 </span>
               </div>
 
@@ -205,12 +217,14 @@ export default function InsiderPage() {
               ) : filings.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center font-mono">
                   {feedUnavailable
-                    ? "Feed market-wide insider memerlukan sumber scraper/Stockbit (Phase 2). Radar per emiten tetap bisa dipakai."
-                    : "Tidak ada laporan filing terkini yang ditemukan."}
+                    ? "Feed insider IDX sedang tidak tersedia. Coba muat ulang beberapa saat lagi."
+                    : "Tidak ada laporan kepemilikan baru yang ditemukan pada periode ini."}
                 </p>
               ) : (
                 filings.map((f, i) => {
-                  const isBuy = f.transaction_type?.toLowerCase() === "buy";
+                  const txType = f.transaction_type?.toLowerCase();
+                  const isBuy = txType === "buy";
+                  const isSell = txType === "sell";
                   const cleanSym = f.symbol?.replace(".JK", "") || "IDX";
 
                   return (
@@ -228,14 +242,16 @@ export default function InsiderPage() {
                             className={`text-[9px] font-mono font-bold uppercase px-1 py-0.2 rounded ${
                               isBuy
                                 ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-rose-500/10 text-rose-400"
+                                : isSell
+                                  ? "bg-rose-500/10 text-rose-400"
+                                  : "bg-slate-700/40 text-slate-400"
                             }`}
                           >
                             {f.transaction_type}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono">
-                          {f.timestamp ? f.timestamp.split("T")[0] : "-"}
+                          {f.date || (f.timestamp ? f.timestamp.split("T")[0] : "-")}
                         </span>
                       </div>
 

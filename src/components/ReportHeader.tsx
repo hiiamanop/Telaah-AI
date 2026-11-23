@@ -67,6 +67,18 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
 
   const multiples = extractValuationMultiples(report.valuation);
   const lastPrice = report.technical?.lastPrice || multiples.lastClosePrice;
+  const flowSource =
+    report.flowLens?.status === "available"
+      ? "Broker + IDX"
+      : report.flowLens?.status === "partial"
+        ? "IDX foreign flow"
+        : "N/A";
+  const insiderSource =
+    report.insiderRadar?.status === "available"
+      ? "IDX filings"
+      : report.insiderRadar?.status === "partial"
+        ? "IDX filings (parsial)"
+        : "N/A";
   const dailyReturn = report.technical?.lastPrice
     ? (report.technical?.dailyReturnPct ?? 0)
     : (multiples.dailyChange ? multiples.dailyChange * 100 : 0);
@@ -246,6 +258,33 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Data source strip */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 text-[10px] text-slate-500 dark:text-slate-400">
+          <span className="font-mono uppercase tracking-wider font-semibold text-slate-400">
+            Sumber:
+          </span>
+          <span className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 font-mono">
+            Harga {report.dataSource === "sectors" ? "Sectors" : "Yahoo"}
+          </span>
+          <span
+            className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 font-mono"
+            title={report.flowLens?.limitationDisclaimer}
+          >
+            Flow {flowSource}
+          </span>
+          <span
+            className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 font-mono"
+            title={report.insiderRadar?.summary}
+          >
+            Insider {insiderSource}
+          </span>
+          {report.flowLens?.coverage === "none" && (
+            <span className="px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono">
+              Broker N/A
+            </span>
+          )}
         </div>
 
         {/* Integrity Details Collapsible Card */}

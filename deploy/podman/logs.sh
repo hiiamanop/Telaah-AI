@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "${1:-app}" = "tunnel" ]; then
-  podman logs -f telaah-tunnel
-else
-  podman logs -f telaah-app
-fi
+case "${1:-app}" in
+  tunnel) podman logs -f telaah-tunnel ;;
+  scraper) podman logs -f telaah-scraper ;;
+  *) podman logs -f telaah-app ;;
+esac

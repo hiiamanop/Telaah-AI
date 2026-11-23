@@ -56,7 +56,8 @@ export function analyzeInsiderCluster(
   management?: ManagementData,
   ownership?: OwnershipData,
   symbol: string = "",
-  lastPrice: number = 0
+  lastPrice: number = 0,
+  filingsAvailable: boolean = true
 ): InsiderClusterAnalysis {
   const cleanSymbol = symbol.toUpperCase().replace(".JK", "");
   const transactions: InsiderTransaction[] = [];

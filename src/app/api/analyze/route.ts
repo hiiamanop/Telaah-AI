@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SectorsClient } from "@/lib/sectors/client";
 import { classifyInputAndExtractClaims } from "@/lib/agent/classifier";
 import { executeEvidencePlan } from "@/lib/agent/coordinator";
 import { synthesizeIntelligenceReport } from "@/lib/agent/synthesizer";
 import { AnalysisMode } from "@/lib/agent/types";
-import { sectorsErrorMessage } from "@/lib/sectors/errors";
+import { marketDataErrorMessage } from "@/lib/market/errors";
+import { getMarketProvider } from "@/lib/market";
 import {
   searchSemanticReportCache,
   upsertReportToVectorCache,
@@ -88,9 +88,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Coordinator & Evidence Collection (Cache Miss / Stale Day)
-    const sectorsClient = new SectorsClient();
+    const provider = getMarketProvider();
     const evidence = await executeEvidencePlan(
-      sectorsClient,
+      provider,
       targetSymbol,
       mode,
       classification.intent,
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     console.error("Error in /api/analyze:", error);
     return NextResponse.json(
       {
-        error: sectorsErrorMessage(error),
+        error: marketDataErrorMessage(error),
         code: error?.kind || "analysis_error",
       },
       { status: 500 }

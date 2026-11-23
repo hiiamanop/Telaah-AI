@@ -235,7 +235,7 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
       {isLoading && (
         <div className="flex items-center gap-2 p-2.5 rounded-md bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-          <span>{loadingStage || "Memproses query data Sectors API v2..."}</span>
+          <span>{loadingStage || "Memproses data pasar..."}</span>
         </div>
       )}
 

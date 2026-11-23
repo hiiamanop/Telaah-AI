@@ -1,0 +1,27 @@
+# TODO
+
+- [x] Approve open-market data design <!-- id=1 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Write Phase 1 implementation plan <!-- id=2 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 1: Vitest harness + FX module <!-- id=3 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 2: Yahoo daily OHLCV + split adjustment <!-- id=4 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 3: Yahoo quarterly financials + USD/IDR <!-- id=5 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 4: Yahoo quoteSummary, valuation, peers, corporate actions <!-- id=6 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 5: Google News RSS, indices, commodities <!-- id=7 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 6: MarketDataProvider + OpenMarketProvider + factory <!-- id=8 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 7: Capability-aware coordinator + limitations <!-- id=9 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 8: FlowLens partial/coverage <!-- id=10 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 9: Insider unavailable + remove seed data <!-- id=11 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 10: Integrity confidence, trading plan, compare/watchlist N/A <!-- id=12 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 11: Cache versioning + report metadata <!-- id=13 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Task 12: API routes + market cache + commodity page <!-- id=14 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Task 13: Branding, docs, env, deployment notes <!-- id=15 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Task 14: Smoke test, lint, build, manual verification <!-- id=16 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Write Phase 2 plan after Phase 1 verification <!-- id=17 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Write Telegram + harmonic brief design and implementation plan <!-- id=18 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Build multi-timeframe harmonic detector with tests <!-- id=19 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Add Yahoo intraday data and timeframe aggregation <!-- id=20 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Build liquid-IDX harmonic screener, ranking, and cache <!-- id=21 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Build owner-only Telegram bot: client, webhook, chat handler <!-- id=22 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Add harmonic brief API, scheduler script, and setup tooling <!-- id=23 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Update docs/env/Podman deployment for Telegram brief <!-- id=24 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [•] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high created=2026-11-23 -->

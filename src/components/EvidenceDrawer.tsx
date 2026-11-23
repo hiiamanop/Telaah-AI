@@ -8,7 +8,13 @@ interface EvidenceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   evidenceRecords: EvidenceRecord[];
-  toolCallTrace: Array<{ endpoint: string; params: any; credits: number; timestamp: string }>;
+  toolCallTrace: Array<{
+    endpoint: string;
+    params: any;
+    credits: number;
+    timestamp: string;
+    provider?: string;
+  }>;
   selectedEvidenceId?: string | null;
 }
 
@@ -182,7 +188,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
           ) : (
             <div className="space-y-3">
               <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
-                Jejak pemanggilan endpoint bursa untuk laporan ini. Menunjukkan kepatuhan kuota kredit (Stop Condition &lt;30 calls).
+                Jejak pemanggilan endpoint pasar untuk laporan ini. Menunjukkan sumber dan urutan pengambilan data.
               </div>
 
               {toolCallTrace.map((call, idx) => (
@@ -193,7 +199,7 @@ export const EvidenceDrawer: React.FC<EvidenceDrawerProps> = ({
                   <div className="flex items-center justify-between text-slate-300 mb-1">
                     <span className="font-semibold text-blue-400">GET {call.endpoint}</span>
                     <span className="text-zinc-400 text-[11px] font-bold">
-                      +{call.credits} Kredit
+                      {call.provider ? `Sumber: ${call.provider}` : "Open Data"}
                     </span>
                   </div>
                   {call.params && Object.keys(call.params).length > 0 && (

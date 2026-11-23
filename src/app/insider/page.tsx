@@ -42,6 +42,7 @@ export default function InsiderPage() {
 
   // Live OJK Filings Stream
   const [filings, setFilings] = useState<LiveFiling[]>([]);
+  const [feedUnavailable, setFeedUnavailable] = useState(false);
   const [filingFilter, setFilingFilter] = useState<"all" | "buy" | "sell">("all");
   const [isLoadingFilings, setIsLoadingFilings] = useState(false);
 
@@ -59,6 +60,7 @@ export default function InsiderPage() {
       const data = await res.json();
       if (data.success && Array.isArray(data.filings)) {
         setFilings(data.filings);
+        setFeedUnavailable(Boolean(data.unavailable));
       }
     } catch (err) {
       console.error("Failed to load filings feed:", err);
@@ -202,7 +204,9 @@ export default function InsiderPage() {
                 </div>
               ) : filings.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center font-mono">
-                  Tidak ada laporan filing terkini yang ditemukan.
+                  {feedUnavailable
+                    ? "Feed market-wide insider memerlukan sumber scraper/Stockbit (Phase 2). Radar per emiten tetap bisa dipakai."
+                    : "Tidak ada laporan filing terkini yang ditemukan."}
                 </p>
               ) : (
                 filings.map((f, i) => {

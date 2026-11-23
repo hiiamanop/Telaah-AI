@@ -280,7 +280,7 @@ export default function TechnicalPage() {
               <div className="bg-black rounded-lg border border-slate-800/80 p-16 text-center space-y-3">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
                 <p className="text-xs font-mono text-slate-400">
-                  Memuat data transaksi 90 hari {selectedSymbol} dari Sectors API v2...
+                  Memuat data transaksi 90 hari {selectedSymbol} dari Yahoo Finance...
                 </p>
               </div>
             ) : report && report.technical ? (

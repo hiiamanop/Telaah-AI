@@ -38,3 +38,8 @@ dev.log
 # qdrant persistent storage
 data/qdrant_storage/
 
+
+# runtime caches and local bot state
+data/harmonic_cache.json
+data/telegram_state.json
+data/brief.log

@@ -84,6 +84,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
   const integrity = report.integrity;
   const score = integrity?.score ?? 85;
   const verdict = integrity?.verdict ?? "Fakta Solid";
+  const displayVerdict = integrity?.confidence === "low" ? "Data Terbatas" : verdict;
 
   // Contextual Evaluation Helpers
   const getPeEvaluation = (pe: number | null | undefined) => {
@@ -135,23 +136,47 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
                     type="button"
                     onClick={() => setShowIntegrityDetails(!showIntegrityDetails)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition ${
-                      verdict === "Fakta Solid"
+                      displayVerdict === "Fakta Solid"
                         ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
-                        : verdict === "Speculative Play"
+                        : displayVerdict === "Speculative Play"
                         ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
                         : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20"
                     }`}
                   >
-                    {verdict === "Fakta Solid" ? (
+                    {displayVerdict === "Fakta Solid" ? (
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                    ) : verdict === "Speculative Play" ? (
+                    ) : displayVerdict === "Speculative Play" ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                     ) : (
                       <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
                     )}
                     <span>Radar: {score}/100</span>
-                    <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90">({verdict})</span>
+                    <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90">({displayVerdict})</span>
                   </button>
+                )}
+
+                {integrity && (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                      integrity.confidence === "high"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                        : integrity.confidence === "medium"
+                          ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+                          : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                    }`}
+                    title={integrity.limitations.join(" ")}
+                  >
+                    Keyakinan: {integrity.confidence === "high" ? "Tinggi" : integrity.confidence === "medium" ? "Sedang" : "Rendah"}
+                  </span>
+                )}
+
+                {report.synthesisError && (
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                    title={report.synthesisError}
+                  >
+                    AI off
+                  </span>
                 )}
 
                 {/* Trading Plan Quick Badge */}
@@ -351,7 +376,7 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
             <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-sans">
               <span>{t("metric.actionAudit", "Aksi & Audit")}</span>
               <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                {report.fromVectorCache ? "0 cr" : `${report.creditsConsumed} cr`}
+                {report.fromVectorCache ? "cache" : "Open Data"}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 pt-1">

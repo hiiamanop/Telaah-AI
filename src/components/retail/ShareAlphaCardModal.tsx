@@ -75,7 +75,7 @@ export const ShareAlphaCardModal: React.FC<ShareAlphaCardModalProps> = ({
 
     ctx.fillStyle = "#38bdf8";
     ctx.font = "bold 22px -apple-system, sans-serif";
-    ctx.fillText("AI MARKET INTELLIGENCE • SECTORS API v2", 70, aspectRatio === "landscape" ? 115 : 165);
+    ctx.fillText("AI MARKET INTELLIGENCE • OPEN MARKET DATA", 70, aspectRatio === "landscape" ? 115 : 165);
 
     // 2. Main Emiten Hero Box
     const boxY = aspectRatio === "landscape" ? 150 : 220;
@@ -225,7 +225,7 @@ export const ShareAlphaCardModal: React.FC<ShareAlphaCardModalProps> = ({
     const bottomY = height - 60;
     ctx.fillStyle = "#64748b";
     ctx.font = "normal 22px -apple-system, sans-serif";
-    ctx.fillText(`Data per ${report.dataAsOf || "Hari Ini"} • Telaah-AI by Sectors API`, 70, bottomY);
+    ctx.fillText(`Data per ${report.dataAsOf || "Hari Ini"} • Telaah-AI by Open Market Data`, 70, bottomY);
 
     ctx.textAlign = "right";
     ctx.fillText("Bukan Rekomendasi Jual/Beli • DYOR", width - 70, bottomY);

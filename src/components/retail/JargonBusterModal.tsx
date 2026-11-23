@@ -221,7 +221,7 @@ export const COMPLETE_JARGON_LIST: JargonItem[] = [
     term: "Stop Condition Kuota Kredit",
     fullName: "Pencegahan Over-call API Bursa",
     category: "Sistem & Audit",
-    definition: "Protokol keamanan sistem yang membatasi pemanggilan API resmi Sectors maksimal 25-30 kali per emiten agar biaya kredit efisien.",
+    definition: "Protokol keamanan sistem yang membatasi pemanggilan API pasar agar beban provider dan latensi tetap terkendali.",
     analogy: "Membawa uang saku dengan anggaran pasti saat belanja di pasar grosir, sehingga tidak kalap dan pulang tepat waktu.",
     example: "Telaah 360 memanfaatkan cache vektor dan ringkasan audit untuk menyajikan data akurat dengan konsumsi kredit minimal.",
   },

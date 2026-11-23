@@ -656,7 +656,7 @@ export class YahooClient {
     try {
       modules = await this.fetchQuoteSummaryModules(yahooSymbol);
     } catch {
-      return null;
+      return this.buildFallbackSnapshot(idSymbol, yahooSymbol, wanted);
     }
 
     const price = modules.price ?? {};
@@ -794,6 +794,94 @@ export class YahooClient {
           },
         ];
       }
+    }
+
+    return snapshot;
+  }
+
+  /**
+   * Honest partial snapshot when Yahoo's quoteSummary is rate-limited: chart
+   * meta gives the name/price, and the normalized quarterly financials give
+   * shares/equity/earnings/revenue for computed multiples. No sector, peers,
+   * management, or ownership are invented.
+   */
+  private async buildFallbackSnapshot(
+    idSymbol: string,
+    yahooSymbol: string,
+    wanted: Set<CompanyReportSection>
+  ): Promise<Partial<CompanyReport> | null> {
+    let meta: Record<string, any> | null = null;
+    try {
+      const url = `${CHART_BASE}/${encodeURIComponent(yahooSymbol)}?range=5d&interval=1d`;
+      const res = await this.fetchImpl(url, {
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as any;
+      meta = body?.chart?.result?.[0]?.meta ?? null;
+    } catch {
+      return null;
+    }
+    if (!meta) return null;
+
+    const price =
+      toFiniteNumber(meta.regularMarketPrice) ??
+      toFiniteNumber(meta.previousClose);
+    const rows = await this.getQuarterlyFinancials(idSymbol, DEFAULT_FINANCIALS_QUARTERS).catch(
+      () => null
+    );
+    const shares = toFiniteNumber(
+      rows?.at(-1)?.financials_sector_metrics?.ordinary_shares
+    );
+    const equity = latestFinancialValue(rows, "total_equity");
+    const earnings = latestFinancialValue(rows, "earnings");
+    const revenueTtm = trailingRevenue(rows);
+    const marketCap = price !== null && shares !== null ? price * shares : null;
+    const dailyChangePct = toFiniteNumber(meta.regularMarketChangePercent);
+    const financialCurrency =
+      rows?.at(-1)?.sourceCurrency?.toUpperCase() ?? null;
+
+    const snapshot: Partial<CompanyReport> = {
+      symbol: idSymbol,
+      company_name: asText(meta.longName) ?? asText(meta.shortName) ?? idSymbol,
+    };
+
+    if (wanted.has("overview")) {
+      snapshot.overview = {
+        company_name: snapshot.company_name,
+        market_cap: marketCap ?? undefined,
+      };
+    }
+
+    if (wanted.has("valuation")) {
+      const valuation: ValuationData = {
+        last_close_price: price ?? undefined,
+        daily_close_change:
+          dailyChangePct === null ? undefined : dailyChangePct / 100,
+        current_pe:
+          marketCap !== null && earnings !== null && earnings > 0
+            ? marketCap / (earnings * 4)
+            : null,
+        current_pb:
+          marketCap !== null && equity !== null && equity > 0
+            ? marketCap / equity
+            : null,
+        current_ps:
+          marketCap !== null && revenueTtm !== null && revenueTtm > 0
+            ? marketCap / revenueTtm
+            : null,
+        financialCurrency: financialCurrency ?? undefined,
+        multipleBasis: "computed",
+      };
+      snapshot.valuation = valuation;
+    }
+
+    if (wanted.has("ownership")) {
+      const ownership: OwnershipData = {
+        major_shareholders: [],
+        whale_investors: [],
+      };
+      snapshot.ownership = ownership;
     }
 
     return snapshot;
@@ -978,17 +1066,20 @@ export class YahooClient {
     yahooSymbol: string,
     allowRetry = true
   ): Promise<QuoteSummaryModules> {
-    const { crumb } = await this.ensureSession();
+    const { cookie, crumb } = await this.ensureSession();
     const endpoint = `/v10/finance/quoteSummary/${yahooSymbol}`;
     const params = new URLSearchParams({
       modules: QUOTE_SUMMARY_MODULES,
       crumb,
     });
     const url = `${QUOTE_SUMMARY_BASE}/${encodeURIComponent(yahooSymbol)}?${params.toString()}`;
+    const headers: Record<string, string> = {};
+    if (cookie) headers.Cookie = cookie;
 
     let res: Response;
     try {
       res = await this.fetchImpl(url, {
+        headers,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {

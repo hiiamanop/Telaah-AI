@@ -81,6 +81,54 @@ describe("YahooClient.getCompanySnapshot", () => {
     expect(snap?.peers?.[0]?.peers_data?.companies?.[0]?.pb).toBeNull();
   });
 
+  it("falls back to chart + financials when quoteSummary is rate-limited", async () => {
+    const chartMeta = {
+      chart: {
+        result: [
+          {
+            meta: {
+              longName: "PT Bank Central Asia Tbk",
+              regularMarketPrice: 5675,
+              regularMarketChangePercent: 1.2,
+            },
+          },
+        ],
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("", { status: 404, headers: { "set-cookie": "A=1; Path=/" } })
+      )
+      .mockResolvedValueOnce(new Response("crumb-1", { status: 200 }))
+      .mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }))
+      .mockResolvedValueOnce(
+        new Response("", { status: 404, headers: { "set-cookie": "A=1; Path=/" } })
+      )
+      .mockResolvedValueOnce(new Response("crumb-2", { status: 200 }))
+      .mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(chartMeta), { status: 200 }));
+    const rows = Array.from({ length: 4 }, (_, index) => ({
+      symbol: "BBCA",
+      date: `2026-${String(3 + index).padStart(2, "0")}-30`,
+      revenue: 10_000_000_000,
+      earnings: 4_000_000_000,
+      total_equity: 100_000_000_000,
+      sourceCurrency: "IDR",
+      financials_sector_metrics: { ordinary_shares: 1_000_000 },
+    }));
+    const client = new YahooClient({
+      fetchImpl: fetchMock,
+      getUsdIdrRate: async () => 16000,
+      getQuarterlyFinancials: async () => rows as any,
+    });
+
+    const snapshot = await client.getCompanySnapshot("BBCA");
+    expect(snapshot?.company_name).toBe("PT Bank Central Asia Tbk");
+    expect(snapshot?.valuation?.current_pe).toBeCloseTo(0.3547);
+    expect(snapshot?.valuation?.multipleBasis).toBe("computed");
+  });
+
   it("maps dividends and splits from chart events", async () => {
     const eventsBody = { chart: { result: [{ meta: { symbol: "BBCA.JK" }, timestamp: [1700000000], indicators: { quote: [{ open: [1], high: [1], low: [1], close: [1], volume: [1] }] }, events: { dividends: { "1700000000": { amount: 25 } }, splits: { "1700086400": { numerator: 2, denominator: 1, splitRatio: "2:1" } } } }] } };
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(eventsBody), { status: 200 }));

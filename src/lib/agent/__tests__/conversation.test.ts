@@ -11,6 +11,7 @@ import {
 describe("conversation guard", () => {
   it("detects greetings and returns a helpful reply", () => {
     expect(detectConversationalIntent("halo")).toBe("greeting");
+    expect(detectConversationalIntent("hola")).toBe("greeting");
     expect(detectConversationalIntent("selamat pagi")).toBe("greeting");
     expect(detectConversationalIntent("halo apa kabar")).toBe("greeting");
     expect(detectConversationalIntent("halo analisis BBCA")).toBeNull();

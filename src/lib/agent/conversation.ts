@@ -42,7 +42,7 @@ export function detectConversationalIntent(text: string): ConversationalIntent |
   if (
     isShort &&
     !hasExplicitTicker &&
-    /^(halo|hallo|hai|hi|hello|hey|pagi|siang|sore|malam|selamat (pagi|siang|sore|malam)|assalamualaikum|salam)\b/.test(
+    /^(halo|hallo|hola|helo|hai|hi|hello|hey|pagi|siang|sore|malam|selamat (pagi|siang|sore|malam)|assalamualaikum|salam)\b/.test(
       value
     )
   ) {

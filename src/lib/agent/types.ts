@@ -18,7 +18,7 @@ import {
 export type AnalysisMode = "quick" | "full";
 
 export const REPORT_DATA_SOURCE = "open-market";
-export const REPORT_DATA_VERSION = 3;
+export const REPORT_DATA_VERSION = 4;
 
 export type IntentType =
   | "claim_check"

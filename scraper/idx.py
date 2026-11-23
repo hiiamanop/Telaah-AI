@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -66,17 +67,31 @@ def fetch_json(url: str, cache_key: str | None = None) -> dict[str, Any]:
         if cached is not None:
             return cached
 
-    try:
-        page = Fetcher.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
-    except Exception as exc:  # noqa: BLE001 - upstream exception types vary
-        raise UpstreamError(f"IDX request gagal: {exc}", kind="network") from exc
+    page = None
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            page = Fetcher.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
+        except Exception as exc:  # noqa: BLE001 - upstream exception types vary
+            last_error = exc
+            time.sleep(0.8 * (attempt + 1))
+            continue
 
-    if page.status == 403:
-        raise UpstreamError("IDX menolak request (Cloudflare 403).", kind="blocked")
-    if page.status != 200:
+        if page.status == 200:
+            break
+        if page.status == 403:
+            raise UpstreamError("IDX menolak request (Cloudflare 403).", kind="blocked")
+        if page.status in (429, 500, 502, 503, 504) and attempt < 2:
+            time.sleep(0.8 * (attempt + 1))
+            continue
+        raise UpstreamError(f"IDX membalas HTTP {page.status}.", kind="provider")
+
+    if page is None:
         raise UpstreamError(
-            f"IDX membalas HTTP {page.status}.", kind="provider"
+            f"IDX request gagal: {last_error or 'unknown'}", kind="network"
         )
+    if page.status != 200:
+        raise UpstreamError(f"IDX membalas HTTP {page.status}.", kind="provider")
 
     try:
         payload = json.loads(page.body)
@@ -152,8 +167,43 @@ def get_foreign_flow(symbol: str, length: int = 90) -> dict[str, Any]:
         f"{IDX_BASE}/primary/ListedCompany/GetTradingInfoSS"
         f"?code={clean}&start=0&length={length}"
     )
-    payload = fetch_json(url, cache_key=f"foreign:{clean}:{length}")
-    return normalize_foreign_flow(payload, clean)
+    try:
+        payload = fetch_json(url, cache_key=f"foreign:{clean}:{length}")
+    except UpstreamError:
+        # IDX occasionally 502s on a large page. Fetch it in 30-row slices and
+        # keep whatever succeeds instead of losing all foreign flow.
+        if length <= 30:
+            raise
+        replies: list[dict[str, Any]] = []
+        for start in range(0, length, 30):
+            chunk_length = min(30, length - start)
+            chunk_url = (
+                f"{IDX_BASE}/primary/ListedCompany/GetTradingInfoSS"
+                f"?code={clean}&start={start}&length={chunk_length}"
+            )
+            try:
+                chunk = fetch_json(
+                    chunk_url,
+                    cache_key=f"foreign:{clean}:{start}:{chunk_length}",
+                )
+            except UpstreamError:
+                continue
+            replies.extend(chunk.get("replies") or [])
+        if not replies:
+            raise
+        payload = {"replies": replies}
+
+    # De-duplicate overlapping chunks by ID, then by date.
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for row in payload.get("replies") or []:
+        key = str(row.get("IDStockSummary") or row.get("Date") or "")
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        unique.append(row)
+    return normalize_foreign_flow({"replies": unique}, clean)
 
 
 def normalize_profile(payload: dict[str, Any], symbol: str) -> dict[str, Any] | None:

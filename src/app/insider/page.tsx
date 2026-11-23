@@ -21,7 +21,8 @@ interface LiveFiling {
   title: string;
   body: string;
   source: string;
-  timestamp: string;
+  date?: string;
+  timestamp?: string;
   symbol: string;
   transaction_type: string;
   holder_type: string;
@@ -125,6 +126,12 @@ export default function InsiderPage() {
                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
                   OJK Stream
                 </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  IDX PDF
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                  Stockbit optional
+                </span>
               </div>
               <p className="text-[11px] text-slate-400">
                 Pelacakan aksi beli dan jual saham oleh Direksi, Komisaris, dan Pemegang Saham Pengendali dari keterbukaan informasi bursa.
@@ -215,7 +222,9 @@ export default function InsiderPage() {
                 </p>
               ) : (
                 filings.map((f, i) => {
-                  const isBuy = f.transaction_type?.toLowerCase() === "buy";
+                  const txType = f.transaction_type?.toLowerCase();
+                  const isBuy = txType === "buy";
+                  const isSell = txType === "sell";
                   const cleanSym = f.symbol?.replace(".JK", "") || "IDX";
 
                   return (
@@ -233,14 +242,16 @@ export default function InsiderPage() {
                             className={`text-[9px] font-mono font-bold uppercase px-1 py-0.2 rounded ${
                               isBuy
                                 ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-rose-500/10 text-rose-400"
+                                : isSell
+                                  ? "bg-rose-500/10 text-rose-400"
+                                  : "bg-slate-700/40 text-slate-400"
                             }`}
                           >
                             {f.transaction_type}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono">
-                          {f.timestamp ? f.timestamp.split("T")[0] : "-"}
+                          {f.date || (f.timestamp ? f.timestamp.split("T")[0] : "-")}
                         </span>
                       </div>
 

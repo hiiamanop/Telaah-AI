@@ -91,6 +91,10 @@ export function analyzeInsiderCluster(
 
   // 2. Parse setiap filing untuk mendeteksi transaksi insider
   filings.forEach((f: any, idx) => {
+    // A scanned/unparseable PDF has no verified shares; do not invent a
+    // neutral transaction or let it pad the cluster counts.
+    if (f.unparsed === true) return;
+
     const title = f.title || "";
     const body = f.body || "";
     const combined = `${title} ${body}`.toLowerCase();

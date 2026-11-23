@@ -36,4 +36,26 @@ describe("analyzeInsiderCluster", () => {
     expect(result.totalBuyShares).toBe(379_428);
     expect(result.transactions[0].action).toBe("BUY");
   });
+
+  it("does not turn an unparsed PDF into a neutral insider transaction", () => {
+    const result = analyzeInsiderCluster(
+      [
+        {
+          date: "2026-11-20",
+          title: "Laporan Kepemilikan",
+          symbol: "BBCA",
+          unparsed: true,
+          source: "idx-announcement-pdf",
+        },
+      ],
+      undefined,
+      undefined,
+      "BBCA",
+      5675,
+      true
+    );
+    expect(result.status).toBe("partial");
+    expect(result.transactions).toEqual([]);
+    expect(result.summary).not.toContain("Cluster");
+  });
 });

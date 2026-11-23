@@ -261,18 +261,18 @@ function latestFinancialValue(
 }
 
 /**
- * Trailing-twelve-month revenue requires four quarters. With fewer periods the
- * sum would understate revenue, so PS is left unavailable instead.
+ * Trailing-twelve-month revenue requires four quarters. Filter out quarters
+ * whose revenue is not yet filed before picking the window, so a missing newer
+ * quarter cannot push a valid older one out. With fewer than four reported
+ * values the sum would understate revenue, so PS is left unavailable instead.
  */
 function trailingRevenue(rows: QuarterlyFinancialMetrics[] | null): number | null {
   if (!rows) return null;
-  const window = sortByDate(rows).slice(-4);
-  if (window.length < 4) return null;
-  const values = window
+  const revenues = sortByDate(rows)
     .map((row) => toFiniteNumber(row.revenue))
     .filter((value): value is number => value !== null);
-  if (values.length < 4) return null;
-  return values.reduce((sum, value) => sum + value, 0);
+  if (revenues.length < 4) return null;
+  return revenues.slice(-4).reduce((sum, value) => sum + value, 0);
 }
 
 function parseSplits(result: ChartResult): YahooSplit[] {

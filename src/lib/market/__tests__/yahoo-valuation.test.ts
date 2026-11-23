@@ -33,6 +33,34 @@ describe("YahooClient.getCompanySnapshot", () => {
     expect(snap?.overview?.sector).toBe("Energy");
   });
 
+  it("computes PS from the last four non-null revenue quarters", async () => {
+    const summaryBody = { quoteSummary: { result: [{
+      price: { longName: "PT Alamtri Resources Indonesia Tbk", regularMarketPrice: 2330 },
+      summaryDetail: { marketCap: 4_000_000_000_000, trailingPE: 5.9 },
+      financialData: { financialCurrency: "USD" },
+    }] } };
+    const quarters = [
+      "2025-09-30", "2025-12-31", "2026-03-31", "2026-06-30", "2026-09-30",
+    ].map((date, index) => ({
+      symbol: "ADRO",
+      date,
+      revenue: index === 4 ? undefined : 1_000_000_000_000,
+      total_equity: 80_500_000_000_000,
+      earnings: 3_300_000_000_000,
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("", { status: 200, headers: { "set-cookie": "A=1; Path=/" } }))
+      .mockResolvedValueOnce(new Response("crumb-1", { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(summaryBody), { status: 200 }));
+    const client = new YahooClient({
+      fetchImpl: fetchMock,
+      getUsdIdrRate: async () => 16000,
+      getQuarterlyFinancials: async () => quarters as any,
+    });
+    const snap = await client.getCompanySnapshot("ADRO", ["valuation"]);
+    expect(snap?.valuation?.current_ps).toBeCloseTo(1);
+  });
+
   it("maps peers and nulls peer PB when the peer reports in USD", async () => {
     const recommendations = { finance: { result: [{ symbol: "ADRO.JK", recommendedSymbols: [{ symbol: "BBRI.JK", score: 0.4 }] }] } };
     const peerSummary = { quoteSummary: { result: [{

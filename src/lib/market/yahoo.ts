@@ -3,8 +3,34 @@ import { MarketDataError } from "./errors";
 import { getUsdIdrRate as fetchUsdIdrRate } from "./fx";
 
 const CHART_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
+const TIMESERIES_BASE =
+  "https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries";
 const DEFAULT_LOOKBACK_DAYS = 95;
+const FINANCIALS_LOOKBACK_DAYS = 3 * 365;
+const DEFAULT_FINANCIALS_QUARTERS = 4;
+const MIN_FINANCIALS_PERIODS = 5;
 const REQUEST_TIMEOUT_MS = 10_000;
+
+const MONETARY_FINANCIAL_TYPES = [
+  "quarterlyTotalRevenue",
+  "quarterlyGrossProfit",
+  "quarterlyOperatingIncome",
+  "quarterlyNetIncome",
+  "quarterlyEBITDA",
+  "quarterlyTotalAssets",
+  "quarterlyTotalLiabilities",
+  "quarterlyStockholdersEquity",
+  "quarterlyTotalDebt",
+  "quarterlyCashAndCashEquivalents",
+  "quarterlyOperatingCashFlow",
+  "quarterlyFreeCashFlow",
+] as const;
+
+const FINANCIAL_TYPES = [
+  ...MONETARY_FINANCIAL_TYPES,
+  "quarterlyBasicEPS",
+  "quarterlyOrdinarySharesNumber",
+] as const;
 
 export interface CallLogEntry {
   endpoint: string;
@@ -43,6 +69,24 @@ interface ChartResult {
     }>;
   };
   events?: { splits?: Record<string, { numerator?: number; denominator?: number }> };
+}
+
+interface TimeseriesEntry {
+  asOfDate?: string;
+  periodType?: string;
+  currencyCode?: string;
+  reportedValue?: { raw?: unknown };
+}
+
+interface TimeseriesResultItem {
+  meta?: { type?: string[] };
+  [key: string]: unknown;
+}
+
+interface FinancialPeriodDraft {
+  date: string;
+  currency: string | null;
+  values: Map<string, number>;
 }
 
 export function toYahooSymbol(symbol: string): string {
@@ -94,6 +138,36 @@ function parseSplits(result: ChartResult): YahooSplit[] {
         split.denominator > 0
     )
     .sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function groupFinancialPeriods(results: TimeseriesResultItem[]): FinancialPeriodDraft[] {
+  const byDate = new Map<string, FinancialPeriodDraft>();
+
+  for (const item of results) {
+    const type = item?.meta?.type?.[0];
+    if (!type) continue;
+    const entries = item[type];
+    if (!Array.isArray(entries)) continue;
+
+    for (const entry of entries as TimeseriesEntry[]) {
+      if (!entry || entry.periodType !== "3M") continue;
+      const date = typeof entry.asOfDate === "string" ? entry.asOfDate : null;
+      const raw = toFiniteNumber(entry.reportedValue?.raw);
+      if (!date || raw === null) continue;
+
+      let period = byDate.get(date);
+      if (!period) {
+        period = { date, currency: null, values: new Map() };
+        byDate.set(date, period);
+      }
+      if (period.currency === null && typeof entry.currencyCode === "string" && entry.currencyCode) {
+        period.currency = entry.currencyCode.toUpperCase();
+      }
+      period.values.set(type, raw);
+    }
+  }
+
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export class YahooClient {
@@ -245,5 +319,162 @@ export class YahooClient {
     }
 
     return rows.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /**
+   * Quarterly statements normalized to IDR. IDX issuers may report in USD
+   * (e.g. ADRO), so monetary values are converted with the USD/IDR rate while
+   * share counts stay untouched. Returns null when a conversion is needed but
+   * no rate is available, rather than mixing currencies.
+   */
+  public async getQuarterlyFinancials(
+    symbol: string,
+    nQuarters: number = DEFAULT_FINANCIALS_QUARTERS
+  ): Promise<QuarterlyFinancialMetrics[] | null> {
+    if (this.financialsOverride) {
+      return this.financialsOverride(symbol, nQuarters);
+    }
+
+    const yahooSymbol = toYahooSymbol(symbol);
+    if (!yahooSymbol) {
+      throw new MarketDataError("Simbol emiten kosong.", "yahoo", "config");
+    }
+    const idSymbol = yahooSymbol.startsWith("^")
+      ? yahooSymbol
+      : yahooSymbol.replace(/\.JK$/, "");
+
+    const nowSeconds = Math.floor(this.now() / 1000);
+    const period1 = nowSeconds - FINANCIALS_LOOKBACK_DAYS * 24 * 60 * 60;
+    const params = {
+      symbol: yahooSymbol,
+      type: FINANCIAL_TYPES.join(","),
+      period1: String(period1),
+      period2: String(nowSeconds),
+    };
+    const endpoint = `/ws/fundamentals-timeseries/v1/finance/timeseries/${yahooSymbol}`;
+    const url = `${TIMESERIES_BASE}/${encodeURIComponent(yahooSymbol)}?${new URLSearchParams(params).toString()}`;
+
+    let res: Response;
+    try {
+      res = await this.fetchImpl(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    } catch (error) {
+      throw new MarketDataError(
+        `Yahoo fundamentals request gagal untuk ${yahooSymbol}: ${(error as Error)?.message ?? "unknown"}`,
+        "yahoo",
+        "network"
+      );
+    }
+
+    if (!res.ok) {
+      const kind = res.status === 404 ? "not_found" : "provider";
+      throw new MarketDataError(
+        `Yahoo fundamentals error [${res.status}] untuk ${yahooSymbol}.`,
+        "yahoo",
+        kind
+      );
+    }
+
+    this.callLog.push({
+      endpoint,
+      params,
+      credits: 0,
+      provider: "yahoo",
+      timestamp: new Date(this.now()).toISOString(),
+    });
+
+    let body: {
+      timeseries?: {
+        result?: TimeseriesResultItem[] | null;
+        error?: { code?: string; description?: string } | null;
+      };
+    };
+    try {
+      body = await res.json();
+    } catch {
+      throw new MarketDataError(
+        `Yahoo fundamentals mengembalikan JSON tidak valid untuk ${yahooSymbol}.`,
+        "yahoo",
+        "provider"
+      );
+    }
+
+    const results = body?.timeseries?.result;
+    if (!results) {
+      const code = body?.timeseries?.error?.code;
+      if (code) {
+        throw new MarketDataError(
+          `Yahoo fundamentals tidak menemukan data untuk ${yahooSymbol} (${code}).`,
+          "yahoo",
+          "not_found"
+        );
+      }
+      return [];
+    }
+
+    const periods = groupFinancialPeriods(results).filter((period) =>
+      MONETARY_FINANCIAL_TYPES.some((type) => period.values.has(type))
+    );
+    if (periods.length === 0) return [];
+
+    const wanted = Number.isFinite(nQuarters) && nQuarters > 0
+      ? Math.floor(nQuarters)
+      : DEFAULT_FINANCIALS_QUARTERS;
+    const selected = periods.slice(-Math.max(wanted + 1, MIN_FINANCIALS_PERIODS));
+
+    if (selected.some((period) => period.currency === null)) return null;
+    const foreignCurrencies = [
+      ...new Set(
+        selected
+          .map((period) => period.currency as string)
+          .filter((currency) => currency !== "IDR")
+      ),
+    ];
+    let usdIdrRate: number | null = null;
+    if (foreignCurrencies.length > 0) {
+      // Only USD/IDR is available; converting any other currency with it would
+      // silently misstate the numbers.
+      if (foreignCurrencies.some((currency) => currency !== "USD")) return null;
+      usdIdrRate = await this.usdIdrRate();
+      if (usdIdrRate === null || !Number.isFinite(usdIdrRate) || usdIdrRate <= 0) {
+        return null;
+      }
+    }
+
+    return selected.map((period) => {
+      const sourceCurrency = period.currency as string;
+      const fxRate = sourceCurrency === "IDR" ? 1 : (usdIdrRate as number);
+      const toIdr = (type: string): number | undefined => {
+        const value = period.values.get(type);
+        return value === undefined ? undefined : value * fxRate;
+      };
+
+      const shares = period.values.get("quarterlyOrdinarySharesNumber");
+      const basicEps = period.values.get("quarterlyBasicEPS");
+      const sectorMetrics: Record<string, number> = {};
+      if (shares !== undefined) sectorMetrics.ordinary_shares = shares;
+      if (basicEps !== undefined) sectorMetrics.basic_eps = basicEps * fxRate;
+
+      return {
+        symbol: idSymbol,
+        date: period.date,
+        currency: "IDR",
+        sourceCurrency,
+        fxRate,
+        revenue: toIdr("quarterlyTotalRevenue"),
+        gross_profit: toIdr("quarterlyGrossProfit"),
+        operating_pnl: toIdr("quarterlyOperatingIncome"),
+        earnings: toIdr("quarterlyNetIncome"),
+        ebitda: toIdr("quarterlyEBITDA"),
+        total_assets: toIdr("quarterlyTotalAssets"),
+        total_liabilities: toIdr("quarterlyTotalLiabilities"),
+        total_equity: toIdr("quarterlyStockholdersEquity"),
+        total_debt: toIdr("quarterlyTotalDebt"),
+        cash_and_short_term_investments: toIdr("quarterlyCashAndCashEquivalents"),
+        operating_cash_flow: toIdr("quarterlyOperatingCashFlow"),
+        free_cash_flow: toIdr("quarterlyFreeCashFlow"),
+        financials_sector_metrics:
+          Object.keys(sectorMetrics).length > 0 ? sectorMetrics : undefined,
+      };
+    });
   }
 }

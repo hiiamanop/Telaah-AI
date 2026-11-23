@@ -300,6 +300,12 @@ export interface NewsItem {
 export interface QuarterlyFinancialMetrics {
   symbol: string;
   date: string;
+  /** Currency of the monetary fields in this record; normalized to IDR by the Yahoo client. */
+  currency?: string;
+  /** Currency the statements were reported in before conversion. */
+  sourceCurrency?: string;
+  /** Rate applied to convert sourceCurrency to IDR (1 when already IDR). */
+  fxRate?: number;
   revenue?: number;
   gross_profit?: number;
   earnings?: number;

@@ -53,4 +53,4 @@ podman pod ps
 podman ps --pod --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 echo
 echo "Lokal:  http://127.0.0.1:3000"
-echo "Domain: https://hiiamanop.my.id (jika tunnel aktif)"
+echo "Subdomain: https://telaah.hiiamanop.my.id (jika tunnel aktif)"

@@ -1,12 +1,12 @@
 # Go Live: Podman + Cloudflare Tunnel
 
-Panduan singkat menjalankan Telaah 360 di PC ini sebagai container Podman yang mudah di-start/stop, lalu diekspos lewat domain `hiiamanop.my.id` memakai Cloudflare Tunnel.
+Panduan singkat menjalankan Telaah 360 di PC ini sebagai container Podman yang mudah di-start/stop, lalu diekspos lewat domain `telaah.hiiamanop.my.id` memakai Cloudflare Tunnel.
 
 ## Arsitektur
 
 ```text
 Internet
-  └─ Cloudflare (hiiamanop.my.id)
+  └─ Cloudflare (telaah.hiiamanop.my.id)
        └─ Cloudflare Tunnel (cloudflared)
             └─ Podman pod: telaah-pod
                  ├─ telaah-app  (Next.js, localhost:3000)
@@ -81,14 +81,14 @@ REBUILD=1 ./deploy/podman/up.sh
 
 ```bash
 curl -I http://127.0.0.1:3000
-curl -I https://hiiamanop.my.id
+curl -I https://telaah.hiiamanop.my.id
 curl -s http://127.0.0.1:3000/api/market-overview | head
 ```
 
-Kalau domain masih `525`:
+Kalau subdomain masih `525`:
 - pastikan container `telaah-tunnel` berjalan (`./deploy/podman/status.sh`);
 - pastikan public hostname tunnel memakai `http://localhost:3000`, bukan `https://`;
-- cek DNS `hiiamanop.my.id` sudah proxied ke tunnel, bukan A record ke IP rumah.
+- cek DNS `telaah.hiiamanop.my.id` sudah proxied ke tunnel, bukan A record ke IP rumah.
 
 ## 5. Pakai subdomain (telaah.hiiamanop.my.id)
 

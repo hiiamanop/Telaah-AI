@@ -24,4 +24,7 @@
 - [x] Build owner-only Telegram bot: client, webhook, chat handler <!-- id=22 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Add harmonic brief API, scheduler script, and setup tooling <!-- id=23 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Update docs/env/Podman deployment for Telegram brief <!-- id=24 priority=medium done=2026-11-23 created=2026-11-23 -->
-- [•] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high created=2026-11-23 -->
+- [x] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high done=2026-11-23 created=2026-11-23 -->
+- [ ] Phase 2A: Python IDX scraper (profile, foreign flow, calendar, suspensions, insider PDF) <!-- id=26 priority=high created=2026-11-23 -->
+- [ ] Phase 2B: Stockbit/IPOT broker summary + market-wide insider feed <!-- id=27 priority=medium created=2026-11-23 -->
+- [ ] Phase 3: UI limitations, data-source status, and Stockbit session banner <!-- id=28 priority=medium created=2026-11-23 -->

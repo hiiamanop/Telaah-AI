@@ -152,16 +152,18 @@ Jawab HANYA dalam format JSON valid berikut:
   )}\n\nPrompt Pengguna (JAWAB DENGAN FOKUS SPESIFIK PADA TOPIK INI): "${userPrompt}"`;
 
   let response: SynthesisResponse;
+  let synthesisError: string | undefined;
   try {
     response = await callOpenRouter<SynthesisResponse>({
       systemPrompt,
       userPrompt: userInstruction,
       temperature: 0.1,
     });
-  } catch (error) {
+  } catch (error: any) {
+    synthesisError = error?.message || "OpenRouter synthesis failed.";
     console.error("Error in synthesizeIntelligenceReport:", error);
     response = {
-      directAnswer: `Telaah 360 telah memeriksa data untuk emiten ${evidence.symbol} (${evidence.companyName}).`,
+      directAnswer: `Sintesis AI gagal untuk ${evidence.symbol} (${evidence.companyName}). Data pasar mentah tetap tersedia; periksa koneksi/API key OpenRouter.`,
       executiveSummary: `Emiten ${evidence.symbol} beroperasi di sektor ${evidence.overview?.sector || "N/A"}. Harga terakhir tercatat Rp ${evidence.technical.lastPrice}.`,
       claimEvaluations: claims.map((c) => ({
         claimId: c.id,
@@ -238,10 +240,13 @@ Jawab HANYA dalam format JSON valid berikut:
     dataSource: REPORT_DATA_SOURCE,
     dataVersion: REPORT_DATA_VERSION,
     dataLimitations: evidence.dataLimitations,
+    synthesisFailed: Boolean(synthesisError),
+    synthesisError,
     openQuestions: Array.isArray(response.openQuestions) && response.openQuestions.length > 0
       ? response.openQuestions
       : ["Perlu mencermati perkembangan realisasi laba kuartal berikutnya."],
     limitations: [
+      ...(synthesisError ? [`Sintesis AI gagal: ${synthesisError}`] : []),
       ...(evidence.providerError ? [evidence.providerError] : []),
       "Telaah 360 adalah asisten informasi dan riset edukasi, bukan penyedia rekomendasi investasi berlisensi.",
       "FlowLens menyajikan agregasi transaksi broker bursa, bukan identitas pemilik sebenarnya.",

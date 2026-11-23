@@ -138,9 +138,13 @@ export function saveReportToHistory(report: CompanyIntelligenceReport): void {
   };
 
   try {
-    // 1. Simpan full report di cache key tersendiri
+    // 1. Simpan full report di cache key tersendiri; jangan cache fallback LLM.
     const cacheKey = `${REPORT_CACHE_KEY_PREFIX}${clean}`;
-    localStorage.setItem(cacheKey, JSON.stringify(report));
+    if (report.synthesisFailed) {
+      localStorage.removeItem(cacheKey);
+    } else {
+      localStorage.setItem(cacheKey, JSON.stringify(report));
+    }
 
     // 2. Perbarui list riwayat
     const existing = getHistory().filter((item) => item.symbol !== clean);
@@ -155,10 +159,12 @@ export function saveReportToHistory(report: CompanyIntelligenceReport): void {
 export function isReportCacheCompatible(report: {
   dataSource?: string;
   dataVersion?: number;
+  synthesisFailed?: boolean;
 }): boolean {
   return (
     report.dataSource === REPORT_DATA_SOURCE &&
-    report.dataVersion === REPORT_DATA_VERSION
+    report.dataVersion === REPORT_DATA_VERSION &&
+    report.synthesisFailed !== true
   );
 }
 

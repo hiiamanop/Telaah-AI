@@ -39,6 +39,21 @@ describe("semantic cache versioning", () => {
     );
   });
 
+  it("does not cache a fallback report whose synthesis failed", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ok = await upsertReportToVectorCache(
+      "BBCA prospek",
+      "BBCA",
+      { symbol: "BBCA", synthesisFailed: true } as any,
+      "full"
+    );
+
+    expect(ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("writes the version into the cached report payload", async () => {
     const fetchMock = vi
       .fn()

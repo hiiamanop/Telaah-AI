@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { REPORT_DATA_VERSION } from "@/lib/agent/types";
 import { getReportFromCache, isReportCacheCompatible } from "../history";
 
 const store = new Map<string, string>();
@@ -23,7 +24,22 @@ describe("report cache versioning", () => {
     expect(isReportCacheCompatible({ dataSource: "sectors", dataVersion: 0 })).toBe(false);
   });
 
-  it("accepts an open-market report at version 1", () => {
-    expect(isReportCacheCompatible({ dataSource: "open-market", dataVersion: 1 })).toBe(true);
+  it("accepts a current open-market report", () => {
+    expect(
+      isReportCacheCompatible({
+        dataSource: "open-market",
+        dataVersion: REPORT_DATA_VERSION,
+      })
+    ).toBe(true);
+  });
+
+  it("rejects a fallback report even at the current version", () => {
+    expect(
+      isReportCacheCompatible({
+        dataSource: "open-market",
+        dataVersion: REPORT_DATA_VERSION,
+        synthesisFailed: true,
+      })
+    ).toBe(false);
   });
 });

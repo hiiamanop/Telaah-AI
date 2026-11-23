@@ -155,6 +155,9 @@ export async function searchSemanticReportCache(
     if (mustConditions.length > 0) {
       filterClause.must = mustConditions;
     }
+    filterClause.must_not = [
+      { key: "report.synthesisFailed", match: { value: true } },
+    ];
 
     const searchBody: any = {
       vector,
@@ -209,6 +212,9 @@ export async function upsertReportToVectorCache(
   report: CompanyIntelligenceReport,
   mode: AnalysisMode
 ): Promise<boolean> {
+  if (report.synthesisFailed) {
+    return false;
+  }
   try {
     const collectionOk = await ensureCollectionExists();
     if (!collectionOk) return false;

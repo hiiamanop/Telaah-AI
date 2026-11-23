@@ -18,7 +18,7 @@ import {
 export type AnalysisMode = "quick" | "full";
 
 export const REPORT_DATA_SOURCE = "open-market";
-export const REPORT_DATA_VERSION = 1;
+export const REPORT_DATA_VERSION = 2;
 
 export type IntentType =
   | "claim_check"
@@ -121,6 +121,8 @@ export interface CompanyIntelligenceReport {
   dataSource: "open-market" | "sectors";
   dataVersion: number;
   dataLimitations: string[];
+  synthesisFailed?: boolean;
+  synthesisError?: string;
 
   // Synthesis, Open Questions, Audit
   openQuestions: string[];

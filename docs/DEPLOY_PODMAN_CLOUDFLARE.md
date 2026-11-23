@@ -9,11 +9,12 @@ Internet
   └─ Cloudflare (telaah.hiiamanop.my.id)
        └─ Cloudflare Tunnel (cloudflared)
             └─ Podman pod: telaah-pod
-                 ├─ telaah-app  (Next.js, localhost:3000)
-                 └─ telaah-tunnel (cloudflared)
+                 ├─ telaah-app     (Next.js, localhost:3000)
+                 ├─ telaah-scraper (IDX scraper, localhost:8001)
+                 └─ telaah-tunnel  (cloudflared)
 ```
 
-Container app dan tunnel berada dalam satu Podman pod, jadi cloudflared cukup memanggil `http://localhost:3000`. Tidak perlu membuka port 80/443 atau memasang Nginx/SSL.
+Container app dan tunnel berada dalam satu Podman pod, jadi cloudflared cukup memanggil `http://localhost:3000`. Scraper hanya listen di `127.0.0.1:8001` dan tidak diekspos ke internet. Tidak perlu membuka port 80/443 atau memasang Nginx/SSL.
 
 ## Prasyarat
 
@@ -44,8 +45,9 @@ cd /home/ahmad/workspace/Telaah-AI
 ```
 
 Perintah ini:
-- build image `telaah-ai:local` jika belum ada;
+- build image `telaah-ai:local` dan `telaah-scraper:local` jika belum ada;
 - membuat pod `telaah-pod`;
+- menjalankan `telaah-scraper` dan menunggu health check;
 - menjalankan `telaah-app` dengan `.env`;
 - menjalankan `telaah-tunnel` jika `TUNNEL_TOKEN` terisi.
 
@@ -67,8 +69,9 @@ Cek status:
 ./deploy/podman/start.sh    # start pod yang sudah ada
 ./deploy/podman/stop.sh     # stop pod (container tetap ada)
 ./deploy/podman/status.sh   # status + cek HTTP lokal/domain
-./deploy/podman/logs.sh     # log app
-./deploy/podman/logs.sh tunnel
+./deploy/podman/logs.sh          # log app
+./deploy/podman/logs.sh tunnel   # log cloudflared
+./deploy/podman/logs.sh scraper  # log IDX scraper
 ```
 
 Untuk rebuild setelah kode berubah:

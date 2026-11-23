@@ -25,6 +25,7 @@
 - [x] Add harmonic brief API, scheduler script, and setup tooling <!-- id=23 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Update docs/env/Podman deployment for Telegram brief <!-- id=24 priority=medium done=2026-11-23 created=2026-11-23 -->
 - [x] Verify tests, lint, build, live harmonic scan, and Telegram setup <!-- id=25 priority=high done=2026-11-23 created=2026-11-23 -->
-- [ ] Phase 2A: Python IDX scraper (profile, foreign flow, calendar, suspensions, insider PDF) <!-- id=26 priority=high created=2026-11-23 -->
-- [ ] Phase 2B: Stockbit/IPOT broker summary + market-wide insider feed <!-- id=27 priority=medium created=2026-11-23 -->
-- [ ] Phase 3: UI limitations, data-source status, and Stockbit session banner <!-- id=28 priority=medium created=2026-11-23 -->
+- [x] Phase 2A: Python IDX scraper (profile, foreign flow, calendar, suspensions, insider PDF) <!-- id=26 priority=high done=2026-11-23 created=2026-11-23 -->
+- [x] Phase 2B: market-wide insider feed via IDX ownership PDFs <!-- id=27 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [x] Phase 3: UI limitations, data-source status, and Stockbit session banner <!-- id=28 priority=medium done=2026-11-23 created=2026-11-23 -->
+- [ ] Optional Phase 2C: Stockbit full broker summary (needs owner session and ToS decision) <!-- id=29 priority=low created=2026-11-23 -->

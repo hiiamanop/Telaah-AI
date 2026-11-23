@@ -43,6 +43,7 @@ export default function InsiderPage() {
   // Live OJK Filings Stream
   const [filings, setFilings] = useState<LiveFiling[]>([]);
   const [feedUnavailable, setFeedUnavailable] = useState(false);
+  const [feedSource, setFeedSource] = useState("idx");
   const [filingFilter, setFilingFilter] = useState<"all" | "buy" | "sell">("all");
   const [isLoadingFilings, setIsLoadingFilings] = useState(false);
 
@@ -61,6 +62,7 @@ export default function InsiderPage() {
       if (data.success && Array.isArray(data.filings)) {
         setFilings(data.filings);
         setFeedUnavailable(Boolean(data.unavailable));
+        setFeedSource(data.source || "idx");
       }
     } catch (err) {
       console.error("Failed to load filings feed:", err);
@@ -158,6 +160,9 @@ export default function InsiderPage() {
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
                   Live OJK Filings Feed
                 </span>
+                <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+                  {feedSource === "idx" ? "IDX PDF" : feedSource}
+                </span>
               </div>
 
               {/* Feed Filter Buttons */}
@@ -205,8 +210,8 @@ export default function InsiderPage() {
               ) : filings.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center font-mono">
                   {feedUnavailable
-                    ? "Feed market-wide insider memerlukan sumber scraper/Stockbit (Phase 2). Radar per emiten tetap bisa dipakai."
-                    : "Tidak ada laporan filing terkini yang ditemukan."}
+                    ? "Feed insider IDX sedang tidak tersedia. Coba muat ulang beberapa saat lagi."
+                    : "Tidak ada laporan kepemilikan baru yang ditemukan pada periode ini."}
                 </p>
               ) : (
                 filings.map((f, i) => {

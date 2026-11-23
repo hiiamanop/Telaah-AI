@@ -49,6 +49,12 @@ Perintah ini:
 - menjalankan `telaah-app` dengan `.env`;
 - menjalankan `telaah-tunnel` jika `TUNNEL_TOKEN` terisi.
 
+Kalau app sudah berjalan dan kamu baru mengisi token, cukup tambahkan connector tanpa rebuild:
+
+```bash
+./deploy/podman/tunnel.sh
+```
+
 Cek status:
 
 ```bash

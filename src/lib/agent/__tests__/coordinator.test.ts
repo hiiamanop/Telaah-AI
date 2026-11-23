@@ -148,6 +148,7 @@ describe("executeEvidencePlan", () => {
     expect(result.flowLens.status).toBe("unavailable");
     expect(result.insiderRadar.status).toBe("unavailable");
     expect(result.dataLimitations.join(" ")).toContain("Broker");
+    expect(result.providerError ?? "").not.toContain("segmen");
     expect(result.creditsConsumed).toBe(0);
   });
 

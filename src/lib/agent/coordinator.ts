@@ -326,7 +326,20 @@ export async function executeEvidencePlan(
     );
   }
 
-  const providerErrors = dataLimitations.length > 0 ? dataLimitations.join(" ") : undefined;
+  const providerErrors = [
+    !companyReport ? "Profil/valuasi emiten tidak tersedia." : null,
+    !dailyTransactions || dailyTransactions.length === 0
+      ? "Data harga harian tidak tersedia."
+      : null,
+    needFlow && !brokerSummary && !foreignFlow
+      ? "Broker summary/foreign flow tidak tersedia."
+      : null,
+    needEvents && hasCapability("insiderFilings") && filingsRes === null
+      ? "Keterbukaan informasi insider tidak tersedia."
+      : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ") || undefined;
 
   // 1. Process Overview Evidence
   if (companyReport?.overview) {

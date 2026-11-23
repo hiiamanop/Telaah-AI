@@ -182,6 +182,19 @@ npm run lint
 | `GET /api/market-overview` | Indeks dan komoditas untuk ticker tape |
 | `GET /api/commodity-prices` | Harga komoditas global |
 | `GET /api/insider-feed` | Feed filing/aktivitas insider |
+| `POST /api/telegram/webhook` | Webhook bot Telegram (owner-only, secret-protected) |
+| `POST /api/brief/harmonic` | Harmonic brief 4H/1D/1W/1M, lokal untuk cron |
+
+## Telegram dan Harmonic Brief
+
+Telaah 360 bisa dipakai lewat bot Telegram pribadi:
+
+- **Chat** di DM bot untuk tanya-jawab emiten dengan pipeline yang sama seperti web.
+- **Brief** harian berisi 5 emiten likuid yang paling dekat ke area buy harmonic pada 4H, 1D, 1W, dan 1M.
+- Hanya `TELEGRAM_OWNER_ID` yang dilayani; tidak ada OAuth atau pendaftaran publik.
+- Brief dijadwalkan dari cron host (08:00 WIB) dan memanggil endpoint lokal, jadi aman dari timeout Cloudflare.
+
+Panduan lengkap: [`docs/TELEGRAM_HARMONIC_BRIEF.md`](./docs/TELEGRAM_HARMONIC_BRIEF.md).
 
 ## Struktur Folder
 
@@ -270,6 +283,7 @@ Data belum disinkronkan lintas browser atau akun pengguna.
 - [`Sectors-API-v2-Audit.md`](./Sectors-API-v2-Audit.md) — catatan historis audit Sectors API v2 (legacy)
 - [`docs/superpowers/specs/`](./docs/superpowers/specs/) — spesifikasi perubahan besar
 - [`docs/superpowers/plans/`](./docs/superpowers/plans/) — implementation plans
+- [`docs/TELEGRAM_HARMONIC_BRIEF.md`](./docs/TELEGRAM_HARMONIC_BRIEF.md) — operasional bot Telegram dan brief harmonic
 
 ## Disclaimer
 

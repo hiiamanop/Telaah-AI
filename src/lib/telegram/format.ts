@@ -127,7 +127,6 @@ export function formatBriefMessage(scan: HarmonicScanResult): string {
     const targetLine = Number.isFinite(best.targets.t1)
       ? ` · target ${number0.format(best.targets.t1)}/${number0.format(best.targets.t2)}`
       : "";
-    const rrLine = best.riskReward ? ` · R/R ${number2.format(best.riskReward)}x` : "";
     const confluences =
       candidate.timeframes.length > 1
         ? ` · konfluensi ${candidate.timeframes.join(", ")}`
@@ -140,7 +139,7 @@ export function formatBriefMessage(scan: HarmonicScanResult): string {
       )} (${number2.format(zoneWidth)}%) · jarak ${number2.format(
         Math.abs(best.distancePct)
       )}% (${distanceLabel(best.distancePct)})`,
-      `   Invalidasi ${number0.format(best.invalidation)}${targetLine}${rrLine}`,
+      `   Invalidasi ${number0.format(best.invalidation)}${targetLine}`,
       `   Skor ${candidate.score} · ${confluences || "1 timeframe"} · <a href="https://www.tradingview.com/chart/?symbol=IDX%3A${encodeURIComponent(
         candidate.symbol
       )}">chart</a>`,

@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { scanHarmonicUniverse } from "@/lib/screener/harmonic-screener";
 import { sendHarmonicBrief } from "@/lib/telegram/brief";
 import { formatBriefMessage } from "@/lib/telegram/format";
-import { loadTelegramConfig } from "@/lib/telegram/config";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +23,14 @@ function receivedSecret(req: NextRequest): string | null {
 }
 
 export async function POST(req: NextRequest) {
-  const config = loadTelegramConfig();
-  if (!config?.briefSecret) {
+  const briefSecret = process.env.BRIEF_SECRET?.trim();
+  if (!briefSecret) {
     return NextResponse.json(
       { ok: false, error: "BRIEF_SECRET belum diatur." },
       { status: 503 }
     );
   }
-  if (!secretMatches(receivedSecret(req), config.briefSecret)) {
+  if (!secretMatches(receivedSecret(req), briefSecret)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

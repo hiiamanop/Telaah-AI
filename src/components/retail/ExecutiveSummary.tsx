@@ -150,7 +150,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               {hasBrokerSummary
                 ? <>Top buyer menyerap <strong className="text-slate-900 dark:text-white">Rp {(Math.abs(totalBuyerVal) / 1e9).toFixed(1)} Miliar</strong> pada rentang harga saat ini.</>
-                : "Broker summary belum tersedia; FlowLens hanya menampilkan foreign flow."}
+                : "Broker summary belum aktif: IPOT sedang down dan Stockbit belum dikonfigurasi. FlowLens hanya menampilkan foreign flow."}
             </p>
             <button
               onClick={() => onNavigateTab?.("flow")}
@@ -259,8 +259,8 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
       </div>
 
       {/* 4. FAST ACTION CENTER: TRADING PLAN & TOOLS */}
-      <div className="p-4 rounded-xl bg-black dark:bg-linear-to-r dark:from-slate-900 dark:to-slate-800 text-white flex flex-col items-stretch gap-3 shadow-md">
-        <div className="min-w-0 space-y-0.5 text-left">
+      <div className="p-4 rounded-xl bg-black dark:bg-linear-to-r dark:from-slate-900 dark:to-slate-800 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
+        <div className="min-w-0 flex-1 space-y-0.5 text-left">
           <div className="flex items-center justify-start gap-2">
             <Crosshair className="w-4 h-4 text-emerald-400 shrink-0" />
             <h3 className="font-bold text-xs text-white leading-snug">
@@ -272,34 +272,37 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
           </p>
         </div>
 
-        <div className="flex w-full max-w-full flex-wrap items-center justify-start gap-2">
-          {report.tradingPlan && onOpenTradingPlan && (
-            <button
-              onClick={onOpenTradingPlan}
-              type="button"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition shadow-2xs"
-            >
-              <Crosshair className="w-3.5 h-3.5" />
-              <span>{t("summary.openTradingPlan", "Buka Trading Plan")}</span>
-            </button>
-          )}
+        <div className="flex w-full sm:w-auto max-w-full flex-col items-stretch sm:items-end gap-1.5">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+            {report.tradingPlan && onOpenTradingPlan && (
+              <button
+                onClick={onOpenTradingPlan}
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition shadow-2xs"
+              >
+                <Crosshair className="w-3.5 h-3.5" />
+                <span>{t("summary.openTradingPlan", "Buka Trading Plan")}</span>
+              </button>
+            )}
 
-          {dividendInfo.hasDividend && onOpenDividendCalc ? (
-            <button
-              onClick={onOpenDividendCalc}
-              type="button"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-black font-semibold text-xs border border-white transition"
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              <span>{t("summary.openDividend", "Kalkulator Dividen")}</span>
-            </button>
-          ) : (
+            {dividendInfo.hasDividend && onOpenDividendCalc && (
+              <button
+                onClick={onOpenDividendCalc}
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-black font-semibold text-xs border border-white transition"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>{t("summary.openDividend", "Kalkulator Dividen")}</span>
+              </button>
+            )}
+          </div>
+
+          {!dividendInfo.hasDividend && (
             <span
-              className="inline-flex items-center gap-1.5 text-[10px] leading-snug text-slate-400"
+              className="text-[10px] leading-snug text-slate-400 text-left sm:text-right"
               title="Emiten ini belum membagikan dividen pada data yang tersedia."
             >
-              <Calculator className="w-3.5 h-3.5 shrink-0" />
-              <span>Kalkulator dividen tidak tersedia</span>
+              Kalkulator dividen tidak tersedia
             </span>
           )}
         </div>

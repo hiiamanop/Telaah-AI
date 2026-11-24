@@ -170,7 +170,7 @@ export const FlowLensModule: React.FC<FlowLensModuleProps> = ({ flowLens }) => {
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
           {flowLens.coverage === "top10"
             ? "Broker summary hanya 10 broker teratas per sisi; fase akumulasi/distribusi tidak dihitung."
-            : "Broker summary tidak tersedia; FlowLens hanya menampilkan foreign flow."}
+            : "Broker summary belum aktif (IPOT sedang down / Stockbit belum dikonfigurasi); FlowLens hanya menampilkan foreign flow."}
         </div>
       )}
 

@@ -1355,9 +1355,9 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-xs">
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-white dark:bg-black border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            className="w-full max-w-lg bg-white dark:bg-[#0b0b0c] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
-            <div className="flex items-center px-3.5 border-b border-slate-100 dark:border-slate-800/80">
+            <div className="flex items-center px-3.5 border-b border-slate-100 dark:border-white/10">
               <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2.5" />
               <input
                 ref={modalSearchInputRef}
@@ -1380,7 +1380,7 @@ export default function Home() {
               />
               <kbd
                 onClick={() => setIsSearchOpen(false)}
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-pointer hover:bg-slate-200"
+                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10"
               >
                 ESC
               </kbd>
@@ -1400,7 +1400,7 @@ export default function Home() {
                           key={item.symbol}
                           type="button"
                           onClick={() => handleSelectEmitenDirect(item.symbol)}
-                          className="w-full flex items-center justify-between p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/70 text-left transition group border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
+                          className="w-full flex items-center justify-between p-2 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-left transition group border border-transparent hover:border-slate-200 dark:hover:border-white/10"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <CompanyLogo symbol={item.symbol} companyName={item.name} size="sm" />
@@ -1454,7 +1454,7 @@ export default function Home() {
                         key={item.sym}
                         type="button"
                         onClick={() => handleSelectEmitenDirect(item.sym)}
-                        className="flex items-center justify-between p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/70 text-left transition group border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
+                        className="flex items-center justify-between p-2 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-left transition group border border-transparent hover:border-slate-200 dark:hover:border-white/10"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <CompanyLogo symbol={item.sym} companyName={item.name} size="sm" />

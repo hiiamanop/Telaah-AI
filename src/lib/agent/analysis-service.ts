@@ -7,9 +7,11 @@ import {
   NO_SYMBOL_MESSAGE,
   conversationalReply,
   detectConversationalIntent,
+  detectSectorRequest,
   looksLikePromptInjection,
   sanitizeUserPrompt,
 } from "./conversation";
+import { buildBankShortlistMessage } from "@/lib/screener/bank-screener";
 import { getMarketProvider } from "@/lib/market";
 import {
   searchSemanticReportCache,
@@ -57,6 +59,11 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
   }
   if (looksLikePromptInjection(prompt)) {
     return { type: "message", message: INJECTION_REFUSAL };
+  }
+
+  const sectorRequest = detectSectorRequest(prompt);
+  if (sectorRequest) {
+    return { type: "message", message: await buildBankShortlistMessage() };
   }
 
   const conversationalIntent = detectConversationalIntent(prompt);

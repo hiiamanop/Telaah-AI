@@ -5,6 +5,8 @@
  */
 
 // Common 4-letter words in Indonesian and English that must never be mistaken for stock tickers
+const LOWERCASE_AMBIGUOUS_TICKERS = new Set(["BANK"]);
+
 const COMMON_WORDS_BLACKLIST = new Set([
   "BILA", "JIKA", "NGAN", "DENG", "SAMA", "DARI", "PADA", "AKAN", "YANG", "TAPI",
   "JUGA", "KITA", "KAMI", "SAYA", "KAMU", "NAMA", "BUAT", "BISA", "DONG", "KALO",
@@ -25,7 +27,14 @@ export function extractValidTickers(text: string): string[] {
   // 1. Explicitly tagged tickers: "saham inet", "emiten wifi", "$BBCA"
   const taggedMatches = text.matchAll(/(?:saham|emiten|kode|\$)\s*([a-zA-Z]{4})\b/gi);
   for (const m of taggedMatches) {
-    const sym = m[1].toUpperCase();
+    const rawToken = m[1];
+    const sym = rawToken.toUpperCase();
+    if (
+      rawToken === rawToken.toLowerCase() &&
+      LOWERCASE_AMBIGUOUS_TICKERS.has(sym)
+    ) {
+      continue;
+    }
     if (!COMMON_WORDS_BLACKLIST.has(sym) && !found.includes(sym)) {
       found.push(sym);
     }

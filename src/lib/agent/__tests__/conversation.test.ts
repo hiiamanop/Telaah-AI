@@ -4,6 +4,7 @@ import {
   NO_SYMBOL_MESSAGE,
   conversationalReply,
   detectConversationalIntent,
+  detectSectorRequest,
   looksLikePromptInjection,
   sanitizeUserPrompt,
 } from "../conversation";
@@ -42,5 +43,13 @@ describe("conversation guard", () => {
   it("asks for a ticker when none is present", () => {
     expect(NO_SYMBOL_MESSAGE).toContain("kode 4 huruf");
     expect(NO_SYMBOL_MESSAGE).toContain("BBCA");
+  });
+
+  it("detects a bank shortlist request without treating 'bank' as the BANK ticker", () => {
+    expect(detectSectorRequest("berikan aku salah satu rekomendasi emiten bank")).toBe("bank");
+    expect(detectSectorRequest("emiten bank yang lain?")).toBe("bank");
+    expect(detectSectorRequest("saham bank apa yang bagus")).toBe("bank");
+    expect(detectSectorRequest("Analisis BANK")).toBeNull();
+    expect(detectSectorRequest("Analisis BBCA")).toBeNull();
   });
 });

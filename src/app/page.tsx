@@ -42,6 +42,7 @@ import {
   isReportCacheCompatible,
 } from "@/lib/storage/history";
 import { ExecutiveSummary } from "@/components/retail/ExecutiveSummary";
+import { extractDividendInfo } from "@/lib/quant/dividends";
 import {
   AlertCircle,
   HelpCircle,
@@ -753,6 +754,8 @@ export default function Home() {
 
   const isCommodity = report?.commodityLens?.isCommodityIssuer;
 
+  const activeDividendInfo = report ? extractDividendInfo(report) : null;
+
   return (
     <div className="flex flex-col min-w-0 h-[100dvh] overflow-hidden bg-[#f7f7f8] dark:bg-[#121214] text-zinc-900 dark:text-zinc-100 transition-colors">
         {/* Top Minimal Navigation Bar */}
@@ -760,7 +763,11 @@ export default function Home() {
           marketIndices={marketIndices}
           marketAsOfDate={marketAsOfDate}
           onOpenJargon={() => setIsJargonOpen(true)}
-          onOpenDividend={() => setIsDividendOpen(true)}
+          onOpenDividend={
+            report && activeDividendInfo && !activeDividendInfo.hasDividend
+              ? undefined
+              : () => setIsDividendOpen(true)
+          }
           onFocusSearch={() => {
             setIsSearchOpen(true);
             setTimeout(() => modalSearchInputRef.current?.focus(), 50);
@@ -792,6 +799,16 @@ export default function Home() {
                     onOpenShareCard={(rep) => {
                       setReport(rep);
                       setIsShareCardOpen(true);
+                    }}
+                    onOpenTradingPlan={(rep) => {
+                      setReport(rep);
+                      setIsTradingPlanOpen(true);
+                    }}
+                    onOpenDividendCalc={(rep) => {
+                      setReport(rep);
+                      if (extractDividendInfo(rep).hasDividend) {
+                        setIsDividendOpen(true);
+                      }
                     }}
                   />
                 </div>
@@ -1225,6 +1242,16 @@ export default function Home() {
                   setReport(rep);
                   setIsShareCardOpen(true);
                 }}
+                onOpenTradingPlan={(rep) => {
+                  setReport(rep);
+                  setIsTradingPlanOpen(true);
+                }}
+                onOpenDividendCalc={(rep) => {
+                  setReport(rep);
+                  if (extractDividendInfo(rep).hasDividend) {
+                    setIsDividendOpen(true);
+                  }
+                }}
               />
             </div>
 
@@ -1299,6 +1326,8 @@ export default function Home() {
         onClose={() => setIsDividendOpen(false)}
         defaultSymbol={report?.symbol || "BBRI"}
         defaultPrice={report?.technical?.lastPrice}
+        defaultYieldPct={activeDividendInfo?.yieldPct ?? undefined}
+        defaultDividendPerShare={activeDividendInfo?.dividendPerShare ?? undefined}
       />
 
       {/* Shareable Alpha Card (Image Generator for WA/IG) */}

@@ -29,6 +29,40 @@ export function looksLikePromptInjection(text: string): boolean {
   return INJECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+export type SectorRequest = "bank";
+
+/**
+ * A request for a sector shortlist is not a ticker request. "emiten bank"
+ * must not be read as the BANK ticker, while an explicit uppercase "BANK"
+ * or "Analisis BANK" still is.
+ */
+export function detectSectorRequest(text: string): SectorRequest | null {
+  const raw = text.trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+
+  if (!/\bbank\b|\bperbankan\b/.test(lower)) return null;
+
+  const listIntent =
+    /(rekomendasi|saham|emiten|daftar|shortlist|pilih|apa|bagus|lain|lainnya|alternatif|bandingkan|screen)/i.test(
+      lower
+    );
+  if (!listIntent) return null;
+
+  const explicitUppercaseTicker = /\bBANK\b/.test(raw);
+  const explicitAnalysis =
+    /\b(analisis|telaah|valuasi|harga|prospek)\b/i.test(lower);
+  if (
+    explicitUppercaseTicker &&
+    explicitAnalysis &&
+    !/(rekomendasi|daftar|shortlist|pilih|lain|lainnya|bandingkan)/i.test(lower)
+  ) {
+    return null;
+  }
+
+  return "bank";
+}
+
 export type ConversationalIntent = "greeting" | "thanks" | "capabilities";
 
 export function detectConversationalIntent(text: string): ConversationalIntent | null {

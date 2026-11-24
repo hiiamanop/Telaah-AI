@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Coins, X, Calculator, PiggyBank, ArrowRight, CheckCircle2, TrendingUp, Info, Target, Sparkles } from "lucide-react";
 
 interface DividendCalculatorModalProps {
@@ -8,6 +8,8 @@ interface DividendCalculatorModalProps {
   onClose: () => void;
   defaultSymbol?: string;
   defaultPrice?: number;
+  defaultYieldPct?: number;
+  defaultDividendPerShare?: number;
 }
 
 const POPULAR_DIVIDEND_STOCKS = [
@@ -26,16 +28,34 @@ export const DividendCalculatorModal: React.FC<DividendCalculatorModalProps> = (
   onClose,
   defaultSymbol = "BBRI",
   defaultPrice,
+  defaultYieldPct,
+  defaultDividendPerShare,
 }) => {
-  const initialStock = POPULAR_DIVIDEND_STOCKS.find((s) => s.symbol === defaultSymbol) || POPULAR_DIVIDEND_STOCKS[0];
+  const initialStock = useMemo(
+    () =>
+      POPULAR_DIVIDEND_STOCKS.find((s) => s.symbol === defaultSymbol) || {
+        symbol: defaultSymbol,
+        name: defaultSymbol,
+        yieldPct: defaultYieldPct ?? 0,
+        price: defaultPrice ?? 0,
+      },
+    [defaultSymbol, defaultPrice, defaultYieldPct]
+  );
 
   const [selectedStock, setSelectedStock] = useState(initialStock.symbol);
   const [calcMode, setCalcMode] = useState<"monthlyDca" | "lumpSum" | "targetIncome">("targetIncome");
   const [amount, setAmount] = useState<number>(1000000); // 1 Juta per bulan / modal
   const [targetMonthlyIncome, setTargetMonthlyIncome] = useState<number>(5000000); // Target Rp 5 Juta/bln
   const [customPrice, setCustomPrice] = useState<number>(defaultPrice || initialStock.price);
-  const [customYield, setCustomYield] = useState<number>(initialStock.yieldPct);
+  const [customYield, setCustomYield] = useState<number>(defaultYieldPct ?? initialStock.yieldPct);
   const [durationYears, setDurationYears] = useState<number>(3);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedStock(initialStock.symbol);
+    setCustomPrice(defaultPrice || initialStock.price);
+    setCustomYield(defaultYieldPct ?? initialStock.yieldPct);
+  }, [isOpen, initialStock, defaultPrice, defaultYieldPct]);
 
   if (!isOpen) return null;
 
@@ -256,6 +276,13 @@ export const DividendCalculatorModal: React.FC<DividendCalculatorModalProps> = (
             </div>
           )}
 
+          {defaultDividendPerShare ? (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Dividen terakhir dari data laporan: <strong className="text-slate-800 dark:text-slate-200">Rp {defaultDividendPerShare.toLocaleString("id-ID")}/saham</strong>
+              {defaultYieldPct ? ` · yield acuan ~${defaultYieldPct.toFixed(2)}%` : ""}
+            </p>
+          ) : null}
+
           {/* Results Summary Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-slate-50 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-slate-900/60 border border-amber-200 dark:border-amber-800/60 space-y-4">
             <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
@@ -268,7 +295,7 @@ export const DividendCalculatorModal: React.FC<DividendCalculatorModalProps> = (
                 </span>
               </span>
               <span className="text-[11px] font-normal text-slate-500">
-                Yield Acuan: ~{customYield}% / thn
+                {defaultYieldPct ? "Yield laporan" : "Yield manual"}: ~{customYield}% / thn
               </span>
             </div>
 

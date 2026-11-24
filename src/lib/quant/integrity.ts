@@ -241,8 +241,10 @@ export function calculateIntegrityScore(params: {
     }
   }
 
-  // Clamp score between 0 and 100
-  const finalScore = Math.max(0, Math.min(100, score));
+  // A perfect score with no financial statements would overstate certainty.
+  const hasFinancials = Boolean(financials?.latest);
+  const completenessPenalty = hasFinancials ? 0 : 25;
+  const finalScore = Math.max(0, Math.min(100, score - completenessPenalty));
 
   // Determine verdict & retail summary
   let verdict: IntegrityVerdict = "Fakta Solid";
@@ -268,7 +270,7 @@ export function calculateIntegrityScore(params: {
   }
 
   const dataQuality = {
-    financials: Boolean(financials?.latest),
+    financials: hasFinancials,
     brokerFlow:
       flow?.status === "available"
         ? ("full" as const)
@@ -301,11 +303,11 @@ export function calculateIntegrityScore(params: {
     dataQuality.valuation,
     dataQuality.brokerFlow !== "none",
   ].filter(Boolean).length;
-  const confidence: RedFlagAnalysisResult["confidence"] =
-    dataQuality.financials &&
-    dataQuality.brokerFlow === "full" &&
-    dataQuality.insider &&
-    dataQuality.valuation
+  const confidence: RedFlagAnalysisResult["confidence"] = !hasFinancials
+    ? "low"
+    : dataQuality.brokerFlow === "full" &&
+        dataQuality.insider &&
+        dataQuality.valuation
       ? "high"
       : availableChecks >= 3 || dataQuality.brokerFlow === "partial"
         ? "medium"

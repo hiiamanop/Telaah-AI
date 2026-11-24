@@ -37,3 +37,12 @@
 - [x] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high done=2026-11-24 created=2026-11-24 -->
 - [ ] Configure Cloudflare Access for telaah.hiiamanop.my.id (email OTP) and bypass /api/telegram/webhook <!-- id=36 priority=high created=2026-11-24 -->
 - [ ] Add app-level rate limits for /api/analyze, /api/qa, /api/compare, and /api/chart <!-- id=37 priority=high created=2026-11-24 -->
+- [ ] Build Telegram alert center for watchlist (price, volume, foreign flow, bandar, harmonic PRZ) <!-- id=38 priority=high created=2026-11-24 -->
+- [ ] Add Stockbit session expiry alert and one-command relogin runbook <!-- id=39 priority=high created=2026-11-24 -->
+- [ ] Write robo-trade design: signals, risk limits, fees, paper-first; live broker execution blocked until API access <!-- id=40 priority=high created=2026-11-24 -->
+- [ ] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium created=2026-11-24 -->
+- [ ] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium created=2026-11-24 -->
+- [ ] Build IDX screener with fundamental/technical/flow filters and saved presets <!-- id=43 priority=medium created=2026-11-24 -->
+- [ ] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium created=2026-11-24 -->
+- [ ] Build robo-trade backtest engine (IDX fees, slippage, lot/tick rules) <!-- id=45 priority=medium created=2026-11-24 -->
+- [ ] Build robo-trade paper runner and Telegram trade journal <!-- id=46 priority=low created=2026-11-24 -->

@@ -20,7 +20,9 @@ A small FastAPI service in `scraper/` wraps IDX public endpoints:
 | `GET /v1/idx/suspensions` | suspension announcements | `GetSuspendData` |
 | `GET /v1/idx/calendar` | RUPS, dividends, corporate actions calendar | `GetCalendar` |
 
-The service uses **Scrapling `Fetcher`** (curl_cffi TLS impersonation) rather than a full stealth browser. On the current machine this passes IDX's Cloudflare checks for the endpoints above. If Cloudflare tightens, the same service can be switched to `StealthySession` without changing the HTTP contract.
+The service uses **Scrapling `Fetcher`** (curl_cffi TLS impersonation) first. If IDX answers with a Cloudflare challenge, it falls back to **`StealthySession`** (Patchright Chromium) automatically. PDF links get a second fallback: the browser opens the PDF viewer and the service captures the raw `application/pdf` response.
+
+The scraper image includes Chromium and its shared libraries. Expect a larger image (~600 MB) and roughly 400–700 MB RAM while a stealth request is running. Requests are cached and the stealth browser is serialized, so this is not a permanently running browser.
 
 ### Phase 2B — Insider feed without Stockbit
 
@@ -42,8 +44,8 @@ Next.js (telaah-app)
   └─ OpenMarketProvider
        ├─ YahooClient        prices, financials, valuation, peers
        └─ ScraperClient ───► telaah-scraper:8001
-                              ├─ Scrapling Fetcher -> IDX JSON
-                              ├─ pypdf -> ownership PDFs
+                              ├─ Scrapling Fetcher / StealthySession -> IDX JSON
+                              ├─ pypdf -> ownership PDFs (browser fallback)
                               ├─ IPOT best-effort (currently unavailable)
                               └─ Stockbit status (not configured)
 ```
@@ -59,6 +61,7 @@ STOCKBIT_ENABLED=false
 ```
 
 - `SCRAPER_URL` empty → app runs Yahoo-only and marks flow/insider unavailable.
+- `IDX_STEALTH_ENABLED=true` (default) enables the browser fallback.
 - `SCRAPER_BROKER_SUMMARY_ENABLED=true` only if a real broker-summary source is configured.
 - `STOCKBIT_ENABLED` is reserved for the optional Stockbit client; it is not needed for the IDX feed.
 

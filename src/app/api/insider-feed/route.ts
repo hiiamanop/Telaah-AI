@@ -6,14 +6,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get("limit") || "25", 10);
+    const limit = parseInt(searchParams.get("limit") || "5", 10);
     const typeParam = searchParams.get("type");
     const type =
       typeParam === "buy" || typeParam === "sell" ? typeParam : ("all" as const);
 
     const provider = getMarketProvider();
     const feed = await provider.getInsiderFeed({
-      limit: Math.min(limit, 50),
+      limit: Math.min(limit, 10),
       type,
     });
 

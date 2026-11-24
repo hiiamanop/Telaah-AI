@@ -45,7 +45,7 @@ export class ScraperClient {
       .trim()
       .replace(/\/+$/, "") || null;
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.timeoutMs = options.timeoutMs ?? 10_000;
+    this.timeoutMs = options.timeoutMs ?? 35_000;
   }
 
   public get isConfigured(): boolean {
@@ -108,12 +108,12 @@ export class ScraperClient {
   async getFilings(
     symbol: string,
     days = 365,
-    limit = 10
+    limit = 5
   ): Promise<FilingItem[] | null> {
     const result = await this.get<{ results: FilingItem[] }>(
       `/v1/idx/insider/${encodeURIComponent(symbol)}`,
       { symbol, days, limit },
-      60_000
+      90_000
     );
     return result?.results ?? null;
   }
@@ -125,9 +125,9 @@ export class ScraperClient {
       "/v1/idx/insider-feed",
       {
         days: params.days ?? 30,
-        limit: params.limit ?? 25,
+        limit: params.limit ?? 5,
       },
-      90_000
+      120_000
     );
   }
 

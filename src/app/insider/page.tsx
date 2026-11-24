@@ -58,7 +58,7 @@ export default function InsiderPage() {
     setIsLoadingFilings(true);
     try {
       const typeParam = type !== "all" ? `&type=${type}` : "";
-      const res = await fetch(`/api/insider-feed?limit=25${typeParam}`);
+      const res = await fetch(`/api/insider-feed?limit=5${typeParam}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.filings)) {
         setFilings(data.filings);

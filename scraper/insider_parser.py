@@ -92,6 +92,23 @@ def _first_field(text: str, labels: list[str]) -> str | None:
 
 
 def _table_row(text: str) -> dict[str, Any]:
+    # IDX PDFs often split the table header across lines:
+    # "379.428,00 Saham \nBiasa 6.982,00". Match across whitespace first.
+    pattern = re.compile(
+        r"([\d.]+,\d{2})\s+(?:Saham\s+Biasa|Common\s+Stock)\s+([\d.]+,\d{2})",
+        re.IGNORECASE,
+    )
+    match = pattern.search(text)
+    if match:
+        window = text[max(0, match.start() - 250) : match.end() + 250]
+        return {
+            "line": window,
+            "shares": parse_number(match.group(1)),
+            "price": parse_number(match.group(2)),
+            "date": parse_transaction_date(window),
+            "transaction_type": detect_transaction_type(window),
+        }
+
     for line in text.splitlines():
         if "Saham Biasa" not in line and "Common Stock" not in line:
             continue

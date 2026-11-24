@@ -179,7 +179,7 @@ export class OpenMarketProvider implements MarketDataProvider {
 
     const feed = await this.scraper.getInsiderFeed({
       days: params?.days ?? 30,
-      limit: params?.limit ?? 25,
+      limit: params?.limit ?? 5,
     });
     if (!feed) {
       return {

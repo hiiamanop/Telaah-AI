@@ -11,6 +11,7 @@ from urllib.parse import unquote
 
 from scrapling.fetchers import Fetcher
 
+from .cache import TTLCache
 from .errors import UpstreamError
 
 WIB = timezone(timedelta(hours=7))
@@ -479,3 +480,92 @@ def login_with_raw(raw: str) -> SessionStatus:
 def clear_session() -> None:
     if SESSION_PATH.exists():
         SESSION_PATH.unlink()
+
+
+CHART_CACHE = TTLCache()
+CHART_TIMEFRAMES = {"1D": "1w", "1W": "1w", "1Y": "1y", "5Y": "5y"}
+
+
+def _chart_time(row: dict[str, Any]) -> int | None:
+    raw_ms = _number(row.get("date"))
+    if raw_ms is not None and raw_ms > 0:
+        return int(raw_ms // 1000)
+    formatted = str(row.get("formatted_date") or "").strip()
+    if not formatted:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            parsed = datetime.strptime(formatted, fmt).replace(tzinfo=WIB)
+            return int(parsed.timestamp())
+        except ValueError:
+            continue
+    return None
+
+
+def get_chart(symbol: str, timeframe: str = "1Y") -> dict[str, Any]:
+    clean = symbol.upper().strip()
+    tf = timeframe.upper()
+    if tf not in CHART_TIMEFRAMES:
+        tf = "1Y"
+    request_tf = CHART_TIMEFRAMES[tf]
+    cache_key = f"chart:{clean}:{tf}"
+    cached = CHART_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    payload = _request_json(
+        f"/charts/{clean}/daily",
+        {
+            "timeframe": request_tf,
+            "chart_type": "PRICE_CHART_TYPE_CANDLE",
+        },
+    )
+    rows = (payload.get("data") or {}).get("prices") or []
+    candles: list[dict[str, Any]] = []
+    for row in rows:
+        close = _number(row.get("value"))
+        time_value = _chart_time(row)
+        if close is None or time_value is None:
+            continue
+        open_price = _number(row.get("open"))
+        high = _number(row.get("high"))
+        low = _number(row.get("low"))
+        volume_lots = _number(row.get("volume")) or 0.0
+        candles.append(
+            {
+                "time": time_value,
+                "date": datetime.fromtimestamp(time_value, tz=WIB).date().isoformat(),
+                "open": open_price if open_price is not None else close,
+                "high": high if high is not None else close,
+                "low": low if low is not None else close,
+                "close": close,
+                "volume": int(round(volume_lots * 100)),
+            }
+        )
+
+    candles.sort(key=lambda item: item["time"])
+    deduped = list({item["time"]: item for item in candles}.values())
+    deduped.sort(key=lambda item: item["time"])
+
+    if tf == "1D" and deduped:
+        latest_day = datetime.fromtimestamp(deduped[-1]["time"], tz=WIB).date()
+        deduped = [
+            item
+            for item in deduped
+            if datetime.fromtimestamp(item["time"], tz=WIB).date() == latest_day
+        ]
+
+    result = {
+        "symbol": clean,
+        "timeframe": tf,
+        "source": "stockbit",
+        "candles": deduped,
+        "last": deduped[-1] if deduped else None,
+        "limitations": (
+            []
+            if deduped
+            else ["Stockbit tidak mengembalikan candle untuk timeframe ini."]
+        ),
+    }
+    CHART_CACHE.set(cache_key, result, 10 if tf in ("1D", "1W") else 300)
+    return result

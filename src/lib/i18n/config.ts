@@ -33,6 +33,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "Terminal",
     "nav.watchlist": "Watchlist",
+    "nav.chart": "Chart",
     "search.placeholder": "Cari emiten...",
     "btn.dividend": "Kalkulator Dividen",
     "btn.jargon": "Kamus Jargon Saham",
@@ -119,6 +120,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "Terminal",
     "nav.watchlist": "Watchlist",
+    "nav.chart": "Chart",
     "search.placeholder": "Search ticker...",
     "btn.dividend": "Dividend Calculator",
     "btn.jargon": "Stock Jargon Buster",
@@ -205,6 +207,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "终端工作台",
     "nav.watchlist": "自选股清单",
+    "nav.chart": "图表",
     "search.placeholder": "搜索印尼股票代码...",
     "btn.dividend": "股息计算器",
     "btn.jargon": "股市术语白话词典",

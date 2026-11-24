@@ -134,6 +134,14 @@ def stockbit_status() -> dict[str, Any]:
     return asdict(stockbit.status())
 
 
+@app.get("/v1/stockbit/chart/{symbol}")
+def stockbit_chart(
+    symbol: str,
+    timeframe: str = Query(default="1Y"),
+) -> dict[str, Any]:
+    return stockbit.get_chart(symbol, timeframe=timeframe)
+
+
 @app.get("/v1/stockbit/broker-summary/{symbol}")
 def stockbit_broker_summary(
     symbol: str,

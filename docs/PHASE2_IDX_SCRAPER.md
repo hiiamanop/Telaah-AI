@@ -119,6 +119,21 @@ podman exec telaah-scraper python -m scraper.stockbit_login --clear
 
 If Stockbit is unavailable, `/v1/broker-summary` falls back to IPOT; if IPOT is also down, it returns `available: false` and the UI stays honest with foreign-flow-only FlowLens.
 
+## Stockbit chart (optional)
+
+`/chart` in the app reads candles from the scraper:
+
+```bash
+curl -s "http://127.0.0.1:8001/v1/stockbit/chart/BBCA?timeframe=1D"
+curl -s "http://127.0.0.1:3000/api/chart?symbol=BBCA&timeframe=1Y"
+```
+
+- `1D` / `1W` map to Stockbit's hourly window and keep the latest session for `1D`.
+- `1Y` / `5Y` map to daily and weekly candles.
+- Stockbit's `1d` window currently returns zero rows, so `1D` is the latest session of the hourly series, not one-minute bars. The UI says so when bars are sparse.
+- If the Stockbit session is missing, `/api/chart` falls back to Yahoo (delayed) and marks `delayed: true`.
+- The scraper caches charts for 10 seconds intraday and 5 minutes for longer windows.
+
 ## Verification
 
 ```bash
@@ -143,14 +158,14 @@ A full BBCA report now returns `flowLens.status = "partial"` with 90 foreign-flo
 - IDX PDFs can be scanned images; those filings are marked `unparsed: true` and never given invented numbers.
 - Foreign-flow rupiah is an estimate: IDX reports shares, multiplied by the daily close.
 - The IDX feed covers ownership reports, not every announcement type.
-- IPOT broker summary is unavailable; FlowLens stays partial.
-- Stockbit is not configured; the optional session path remains unimplemented.
-- Yahoo remains the price/fundamental source and can lag or change fields.
+- IPOT broker summary is unavailable when Stockbit is down; FlowLens then stays partial instead of showing fake rows.
+- Stockbit intraday coverage is limited to its hourly window; minute bars are not available.
+- Yahoo remains the fallback price/fundamental source and can lag or change fields.
 - IDX endpoints are unofficial and can block; the service degrades to unavailable rather than fabricating data.
 
 ## Next optional work
 
-1. Stockbit session client for full broker summary (only if the owner accepts the ToS/account risk).
-2. IPOT parser once the endpoint returns a stable page.
-3. Chart image attachments for the Telegram brief.
-4. Nightly disk cache/SQLite for the insider feed across restarts.
+1. IPOT parser once the endpoint returns a stable page.
+2. Chart image attachments for the Telegram brief.
+3. Nightly disk cache/SQLite for the insider feed across restarts.
+4. Minute-bar chart source if Stockbit exposes one again.

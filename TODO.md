@@ -28,4 +28,5 @@
 - [x] Phase 2A: Python IDX scraper (profile, foreign flow, calendar, suspensions, insider PDF) <!-- id=26 priority=high done=2026-11-23 created=2026-11-23 -->
 - [x] Phase 2B: market-wide insider feed via IDX ownership PDFs <!-- id=27 priority=medium done=2026-11-23 created=2026-11-23 -->
 - [x] Phase 3: UI limitations, data-source status, and Stockbit session banner <!-- id=28 priority=medium done=2026-11-23 created=2026-11-23 -->
-- [ ] Optional Phase 2C: Stockbit full broker summary (needs owner session and ToS decision) <!-- id=29 priority=low created=2026-11-23 -->
+- [x] Optional Phase 2C: Stockbit full broker summary (needs owner session and ToS decision) <!-- id=29 priority=low done=2026-11-24 created=2026-11-23 -->
+- [x] Add live Stockbit chart page with Yahoo fallback <!-- id=30 priority=high done=2026-11-24 created=2026-11-24 -->

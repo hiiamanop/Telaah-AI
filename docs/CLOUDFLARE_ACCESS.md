@@ -28,12 +28,22 @@ the Next.js page loads. The SSE chart connection uses the same Access cookie.
 Create a second Access application with a **Bypass** policy:
 
 - Domain: `telaah.hiiamanop.my.id`
-- Path: `/api/telegram/webhook`
+- Path: `api/telegram/webhook` (without a leading slash)
 - Policy: **Bypass**, Include **Everyone**
 
-This is safe only because the route validates
+Cloudflare gives the more specific path precedence over the `/*` application,
+so every other route stays protected. This is safe only because the route validates
 `X-Telegram-Bot-Api-Secret-Token` against `TELEGRAM_WEBHOOK_SECRET`. Do not
-remove that check.
+remove that check. Test it:
+
+```bash
+curl -i -X POST https://telaah.hiiamanop.my.id/api/telegram/webhook \
+  -H 'content-type: application/json' -d '{}'
+```
+
+The response must be `401` JSON from the app, not `302` to
+`cloudflareaccess.com`. A `302` means the bypass path does not match yet, and
+the Telegram bot will not receive updates.
 
 `/api/brief/harmonic` is called by the local cron through
 `http://127.0.0.1:3000`, so it does not pass through Cloudflare. If you ever

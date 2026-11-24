@@ -32,6 +32,23 @@ fi
 echo "Creating pod ..."
 podman pod create --name telaah-pod --restart=unless-stopped -p 127.0.0.1:3000:3000 -p 127.0.0.1:8001:8001
 
+echo "Starting Redis ..."
+podman run -d \
+  --pod telaah-pod \
+  --name telaah-redis \
+  --restart=unless-stopped \
+  docker.io/library/redis:7-alpine \
+  redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru >/dev/null
+
+echo "Waiting for Redis ..."
+for _ in $(seq 1 20); do
+  if podman exec telaah-redis redis-cli ping 2>/dev/null | grep -q PONG; then
+    echo "Redis ready."
+    break
+  fi
+  sleep 1
+done
+
 echo "Starting IDX scraper ..."
 podman run -d \
   --pod telaah-pod \
@@ -57,6 +74,7 @@ podman run -d \
   --name telaah-app \
   --restart=unless-stopped \
   --env-file .env \
+  --env REDIS_URL=redis://127.0.0.1:6379 \
   -v "$ROOT/data:/app/data:Z" \
   telaah-ai:local
 

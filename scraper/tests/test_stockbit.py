@@ -133,6 +133,7 @@ class ChartTests(unittest.TestCase):
         self.assertEqual(result["candles"][0]["close"], 5750)
         self.assertEqual(result["candles"][0]["volume"], 120000)
         self.assertEqual(result["last"]["close"], 5800)
+        self.assertEqual(result["previous_close"], 5750)
         request.assert_called_once_with(
             "/charts/BBCA/daily",
             {"timeframe": "1y", "chart_type": "PRICE_CHART_TYPE_CANDLE"},
@@ -153,6 +154,7 @@ class ChartTests(unittest.TestCase):
 
         self.assertEqual(len(result["candles"]), 2)
         self.assertEqual(result["candles"][-1]["close"], 5780)
+        self.assertEqual(result["previous_close"], 5700)
 
     def test_empty_payload_reports_limitation(self):
         with mock.patch(

@@ -547,6 +547,19 @@ def get_chart(symbol: str, timeframe: str = "1Y") -> dict[str, Any]:
     deduped = list({item["time"]: item for item in candles}.values())
     deduped.sort(key=lambda item: item["time"])
 
+    previous_close: float | None = None
+    if deduped:
+        latest_day = datetime.fromtimestamp(deduped[-1]["time"], tz=WIB).date()
+        earlier = [
+            item
+            for item in deduped
+            if datetime.fromtimestamp(item["time"], tz=WIB).date() < latest_day
+        ]
+        if earlier:
+            previous_close = earlier[-1]["close"]
+        elif len(deduped) > 1:
+            previous_close = deduped[-2]["close"]
+
     if tf == "1D" and deduped:
         latest_day = datetime.fromtimestamp(deduped[-1]["time"], tz=WIB).date()
         deduped = [
@@ -561,11 +574,13 @@ def get_chart(symbol: str, timeframe: str = "1Y") -> dict[str, Any]:
         "source": "stockbit",
         "candles": deduped,
         "last": deduped[-1] if deduped else None,
+        "previous_close": previous_close,
         "limitations": (
             []
             if deduped
             else ["Stockbit tidak mengembalikan candle untuk timeframe ini."]
         ),
     }
-    CHART_CACHE.set(cache_key, result, 10 if tf in ("1D", "1W") else 300)
+    cache_ttl = {"1D": 4, "1W": 4, "1Y": 15, "5Y": 60}[tf]
+    CHART_CACHE.set(cache_key, result, cache_ttl)
     return result

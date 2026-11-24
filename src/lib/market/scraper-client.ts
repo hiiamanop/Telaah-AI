@@ -35,6 +35,7 @@ export interface ChartCandle {
 
 export interface ScraperChart {
   candles: ChartCandle[];
+  previousClose?: number | null;
   source: string;
 }
 
@@ -119,11 +120,13 @@ export class ScraperClient {
   ): Promise<ScraperChart | null> {
     const result = await this.get<{
       candles?: ChartCandle[];
+      previous_close?: number | null;
       source?: string;
     }>(`/v1/stockbit/chart/${encodeURIComponent(symbol)}`, { timeframe });
     if (!result?.candles?.length) return null;
     return {
       candles: result.candles,
+      previousClose: result.previous_close ?? null,
       source: result.source ?? "stockbit",
     };
   }

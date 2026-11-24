@@ -119,7 +119,7 @@ podman exec telaah-scraper python -m scraper.stockbit_login --clear
 
 If Stockbit is unavailable, `/v1/broker-summary` falls back to IPOT; if IPOT is also down, it returns `available: false` and the UI stays honest with foreign-flow-only FlowLens.
 
-## Stockbit chart (optional)
+## Stockbit chart and live stream (optional)
 
 `/chart` in the app reads candles from the scraper:
 
@@ -132,7 +132,30 @@ curl -s "http://127.0.0.1:3000/api/chart?symbol=BBCA&timeframe=1Y"
 - `1Y` / `5Y` map to daily and weekly candles.
 - Stockbit's `1d` window currently returns zero rows, so `1D` is the latest session of the hourly series, not one-minute bars. The UI says so when bars are sparse.
 - If the Stockbit session is missing, `/api/chart` falls back to Yahoo (delayed) and marks `delayed: true`.
-- The scraper caches charts for 10 seconds intraday and 5 minutes for longer windows.
+- The scraper caches charts for 4 seconds for `1D`/`1W`, 15 seconds for `1Y`, and 60 seconds for `5Y`.
+
+### Live updates over Redis + SSE
+
+The chart page does **not** poll from the browser. It opens one `/api/chart/stream` SSE connection; the server pushes full frames:
+
+```bash
+curl -N "http://127.0.0.1:3000/api/chart/stream?symbol=BBCA&timeframe=1W"
+```
+
+- Redis runs inside the same pod (`telaah-redis`) and caches each symbol/timeframe under `telaah:chart:{SYMBOL}:{TF}`.
+- The stream hub keeps one refresher per watched symbol, publishes frames on `telaah:chart:live`, and fans them out to every connected browser.
+- Refresh is server-side only while at least one browser is watching: 5 seconds during the IDX session, paused outside it. Stockbit exposes chart candles over REST only, so this upstream refresh is the source limit; the browser still receives push frames, never polling.
+- `CHART_STREAM_REFRESH_MS` changes the server refresh interval (default `5000`, minimum `2000`). Do not set it below Stockbit's 1 request/second pacing.
+- If Redis is unavailable, the single app process still streams locally; Redis is needed for cache sharing and multi-instance fan-out.
+- SSE sends a heartbeat every 15 seconds so Cloudflare does not close an idle connection.
+
+Check the live path:
+
+```bash
+podman exec telaah-redis redis-cli ping
+podman exec telaah-redis redis-cli PUBSUB CHANNELS 'telaah:*'
+curl -N "http://127.0.0.1:3000/api/chart/stream?symbol=BBCA&timeframe=1D"
+```
 
 ## Verification
 
@@ -160,6 +183,7 @@ A full BBCA report now returns `flowLens.status = "partial"` with 90 foreign-flo
 - The IDX feed covers ownership reports, not every announcement type.
 - IPOT broker summary is unavailable when Stockbit is down; FlowLens then stays partial instead of showing fake rows.
 - Stockbit intraday coverage is limited to its hourly window; minute bars are not available.
+- The browser is push-only, but the server still refreshes Stockbit while a chart is watched because Stockbit does not expose a chart WebSocket to this account.
 - Yahoo remains the fallback price/fundamental source and can lag or change fields.
 - IDX endpoints are unofficial and can block; the service degrades to unavailable rather than fabricating data.
 

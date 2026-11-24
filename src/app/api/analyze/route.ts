@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runAnalysis } from "@/lib/agent/analysis-service";
 import { marketDataErrorMessage } from "@/lib/market/errors";
+import { guardRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const limited = await guardRateLimit(req, "analyze", RATE_LIMIT_RULES.analyze);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const result = await runAnalysis({

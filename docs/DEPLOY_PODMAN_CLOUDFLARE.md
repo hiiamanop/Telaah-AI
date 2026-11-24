@@ -123,7 +123,13 @@ curl -I https://telaah.hiiamanop.my.id
 curl -sS https://telaah.hiiamanop.my.id/api/market-overview | head
 ```
 
-## 6. Catatan
+## 6. Keamanan akses
+
+Sebelum tunnel publik dinyalakan, selesaikan [CLOUDFLARE_ACCESS.md](CLOUDFLARE_ACCESS.md):
+Cloudflare Access untuk pemilik, bypass khusus webhook Telegram, dan rate
+limit API. Jangan biarkan `/api/analyze` terbuka tanpa autentikasi.
+
+## 7. Catatan
 
 - PC harus menyala dan Podman berjalan selama aplikasi dipakai.
 - Qdrant/Redis tidak wajib. Tanpa Qdrant, semantic cache dilewati; tanpa Redis, cache memori lokal dipakai.

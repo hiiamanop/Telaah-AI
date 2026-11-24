@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callOpenRouter } from "@/lib/agent/openrouter";
+import {
+  RATE_LIMIT_RULES,
+  guardRateLimit,
+} from "@/lib/security/rate-limit";
 import { CompanyIntelligenceReport } from "@/lib/agent/types";
 import {
   INJECTION_REFUSAL,
@@ -10,6 +14,9 @@ import {
 import { buildBankShortlistMessage } from "@/lib/screener/bank-screener";
 
 export async function POST(req: NextRequest) {
+  const limited = await guardRateLimit(req, "qa", RATE_LIMIT_RULES.qa);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { text: question } = sanitizeUserPrompt(body.question);

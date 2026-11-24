@@ -161,6 +161,11 @@ function makeDeps(overrides: Partial<TelegramHandlerDeps> = {}) {
     runBrief: async () => ({ chatId: 42, text: "BRIEF RESULT" }),
     getLastSymbol: () => null,
     setLastSymbol: vi.fn(),
+    alerts: {
+      list: vi.fn(async () => ["BBCA"]),
+      add: vi.fn(async () => ["BBCA", "BBRI"]),
+      remove: vi.fn(async () => ["BBCA"]),
+    },
     ...overrides,
   };
   return { deps, sent, analyze };
@@ -206,6 +211,32 @@ describe("telegram handler", () => {
     );
     expect(sent[0].text).toContain("Halo!");
     expect(analyze).not.toHaveBeenCalled();
+  });
+
+  it("adds and removes alert symbols from chat", async () => {
+    const { deps, sent } = makeDeps();
+    await handleTelegramUpdate(
+      { update_id: 6, message: { from: { id: 42 }, chat: { id: 42 }, text: "/watch BBRI" } },
+      deps
+    );
+    expect(deps.alerts?.add).toHaveBeenCalledWith("BBRI");
+    expect(sent[0].text).toContain("BBRI");
+
+    await handleTelegramUpdate(
+      { update_id: 7, message: { from: { id: 42 }, chat: { id: 42 }, text: "/unwatch BBCA" } },
+      deps
+    );
+    expect(deps.alerts?.remove).toHaveBeenCalledWith("BBCA");
+  });
+
+  it("lists the alert watchlist", async () => {
+    const { deps, sent } = makeDeps();
+    await handleTelegramUpdate(
+      { update_id: 8, message: { from: { id: 42 }, chat: { id: 42 }, text: "/watchlist" } },
+      deps
+    );
+    expect(sent[0].text).toContain("Watchlist alert");
+    expect(sent[0].text).toContain("BBCA");
   });
 
   it("uses the last symbol for a follow-up question", async () => {

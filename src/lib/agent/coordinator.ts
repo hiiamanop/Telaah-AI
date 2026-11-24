@@ -151,13 +151,10 @@ export async function executeEvidencePlan(
     provider.capabilities.has(capability);
 
   // Determine needed modules based on mode, then gate by provider capability.
-  const needFlow =
-    hasCapability("brokerSummary") || hasCapability("foreignFlow")
-      ? mode === "full" ||
-        intent === "claim_check" ||
-        intent === "market_technical" ||
-        claims.some((c) => c.claimType === "flow")
-      : false;
+  // Flow and insider are part of the report canvas in every mode. Quick mode
+  // may skip news/events, but it must not render an empty bandar/insider panel
+  // while the provider can supply the data.
+  const needFlow = hasCapability("brokerSummary") || hasCapability("foreignFlow");
 
   const needTechnical =
     mode === "full" ||
@@ -228,7 +225,7 @@ export async function executeEvidencePlan(
       : Promise.resolve(null);
 
   let filingsPromise: Promise<{ results: FilingItem[] } | null> =
-    needEvents && hasCapability("insiderFilings")
+    hasCapability("insiderFilings")
       ? provider.getFilings(clean).catch(() => null)
       : Promise.resolve(null);
 

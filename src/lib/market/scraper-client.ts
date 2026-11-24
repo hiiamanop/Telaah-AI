@@ -153,15 +153,17 @@ export class ScraperClient {
       data?: BrokerSummaryResponse["data"];
       source?: BrokerSummaryResponse["source"];
       coverage?: BrokerSummaryResponse["coverage"];
-    }>(`/v1/ipot/broker-summary/${encodeURIComponent(symbol)}`, { symbol });
-    if (!result?.available || !Array.isArray(result.data) || result.data.length === 0) {
-      return null;
-    }
+    }>(`/v1/broker-summary/${encodeURIComponent(symbol)}`, {
+      symbol,
+      days: 14,
+    });
+    if (!result || result.available === false) return null;
+    if (!Array.isArray(result.data) || result.data.length === 0) return null;
     return {
       symbol,
       data: result.data,
-      source: result.source ?? "ipot",
-      coverage: result.coverage ?? "top10",
+      source: result.source ?? "stockbit",
+      coverage: result.coverage ?? "full",
     };
   }
 

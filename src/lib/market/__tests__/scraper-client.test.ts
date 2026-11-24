@@ -70,6 +70,45 @@ describe("ScraperClient", () => {
     expect(feed?.source).toBe("idx");
   });
 
+  it("maps a full Stockbit broker summary", async () => {
+    const client = new ScraperClient({
+      baseUrl: "http://scraper:8001",
+      fetchImpl: vi.fn().mockResolvedValue(
+        jsonResponse({
+          symbol: "BBRI",
+          source: "stockbit",
+          coverage: "full",
+          data: [
+            {
+              date: "2026-11-21",
+              summary: [
+                {
+                  broker_code: "KZ",
+                  bfreq: 10,
+                  blot: 100,
+                  bval: 500_000_000,
+                  bavg_per_share: 5000,
+                  sfreq: 2,
+                  slot: 20,
+                  sval: 100_000_000,
+                  savg_per_share: 5000,
+                  nlot: 80,
+                  nval: 400_000_000,
+                  navg_per_share: 5000,
+                },
+              ],
+            },
+          ],
+        })
+      ) as any,
+    });
+    const result = await client.getBrokerSummary("BBRI");
+    expect(result?.source).toBe("stockbit");
+    expect(result?.coverage).toBe("full");
+    expect(result?.data[0].summary[0].broker_code).toBe("KZ");
+    expect(result?.data[0].summary[0].nval).toBe(400_000_000);
+  });
+
   it("returns null instead of throwing when the scraper is down", async () => {
     const client = new ScraperClient({
       baseUrl: "http://scraper:8001",

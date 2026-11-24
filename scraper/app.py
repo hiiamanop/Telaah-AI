@@ -1,4 +1,5 @@
 import logging
+from dataclasses import asdict
 from typing import Any
 
 from fastapi import FastAPI, Query
@@ -27,7 +28,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "telaah-scraper",
         "engine": "scrapling-fetcher",
-        "stockbit": stockbit.status(),
+        "stockbit": asdict(stockbit.status()),
     }
 
 
@@ -130,16 +131,33 @@ def ipot_broker_summary(
 
 @app.get("/v1/stockbit/status")
 def stockbit_status() -> dict[str, Any]:
-    return stockbit.status()
+    return asdict(stockbit.status())
 
 
 @app.get("/v1/stockbit/broker-summary/{symbol}")
-def stockbit_broker_summary(symbol: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=503,
-        content={
-            "error": "Stockbit belum dikonfigurasi.",
-            "kind": "not_configured",
-            "symbol": symbol.upper(),
-        },
-    )
+def stockbit_broker_summary(
+    symbol: str,
+    days: int = Query(default=14, ge=1, le=365),
+) -> dict[str, Any]:
+    return stockbit.get_broker_summary(symbol, days=days)
+
+
+@app.get("/v1/broker-summary/{symbol}")
+def broker_summary(
+    symbol: str,
+    days: int = Query(default=14, ge=1, le=365),
+) -> dict[str, Any]:
+    try:
+        return stockbit.get_broker_summary(symbol, days=days)
+    except UpstreamError as exc:
+        if exc.kind in ("not_configured", "expired", "blocked", "network", "provider", "not_found"):
+            ipot_result = ipot.get_broker_summary(symbol)
+            if ipot_result:
+                return ipot_result
+            return {
+                "available": False,
+                "source": "none",
+                "reason": exc.message,
+                "data": [],
+            }
+        raise

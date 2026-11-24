@@ -30,13 +30,16 @@ if podman pod exists telaah-pod; then
 fi
 
 echo "Creating pod ..."
-podman pod create --name telaah-pod -p 127.0.0.1:3000:3000 -p 127.0.0.1:8001:8001
+podman pod create --name telaah-pod --restart=unless-stopped -p 127.0.0.1:3000:3000 -p 127.0.0.1:8001:8001
 
 echo "Starting IDX scraper ..."
 podman run -d \
   --pod telaah-pod \
   --name telaah-scraper \
+  --restart=unless-stopped \
   --env IDX_CACHE_TTL_SECONDS=900 \
+  --env STOCKBIT_SESSION_FILE=/app/data/stockbit_session.json \
+  -v "$ROOT/data:/app/data:Z" \
   telaah-scraper:local
 
 echo "Waiting for scraper health ..."
@@ -52,6 +55,7 @@ echo "Starting app ..."
 podman run -d \
   --pod telaah-pod \
   --name telaah-app \
+  --restart=unless-stopped \
   --env-file .env \
   -v "$ROOT/data:/app/data:Z" \
   telaah-ai:local
@@ -62,6 +66,7 @@ if [ -n "${TOKEN:-}" ]; then
   podman run -d \
     --pod telaah-pod \
     --name telaah-tunnel \
+    --restart=unless-stopped \
     --env "TUNNEL_TOKEN=$TOKEN" \
     docker.io/cloudflare/cloudflared:latest \
     tunnel --no-autoupdate run

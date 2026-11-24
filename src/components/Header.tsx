@@ -33,6 +33,7 @@ interface HeaderProps {
   onOpenJargon?: () => void;
   onOpenDividend?: () => void;
   onFocusSearch?: () => void;
+  showSearch?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenJargon,
   onOpenDividend,
   onFocusSearch,
+  showSearch = true,
 }) => {
   const pathname = usePathname();
   const { t } = useI18n();
@@ -57,6 +59,15 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="w-full px-3 lg:px-5 py-2.5 min-h-[50px] flex items-center justify-between gap-3 text-xs">
         {/* Brand & Section Nav */}
         <div className="flex items-center gap-4 shrink-0 py-0.5">
+          <Link href="/" className="flex items-center gap-2 sm:hidden" aria-label="Telaah 360">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/dark-logo.png" alt="" className="h-5 w-auto hidden dark:block" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/light-logo.png" alt="" className="h-5 w-auto block dark:hidden" />
+            <span className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-white">
+              Telaah
+            </span>
+          </Link>
           <nav aria-label="Navigasi Utama" className="hidden sm:flex items-center gap-1 py-0.5">
             {navLinks.map((link) => {
               const active = pathname === link.href;
@@ -78,21 +89,23 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Global Search Hotkey Trigger */}
-        <div className="flex-1 max-w-sm mx-2 py-0.5">
-          <button
-            type="button"
-            onClick={onFocusSearch}
-            className="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-zinc-500 hover:text-slate-900 dark:hover:text-slate-200 transition text-xs"
-          >
-            <span className="flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
-              <span className="text-slate-600 dark:text-slate-400">Cari emiten</span>
-            </span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded border border-slate-300 dark:border-white/10">
-              <Command className="w-2.5 h-2.5" /> K
-            </kbd>
-          </button>
-        </div>
+        {showSearch && (
+          <div className="flex-1 max-w-sm mx-2 py-0.5">
+            <button
+              type="button"
+              onClick={onFocusSearch}
+              className="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-zinc-500 hover:text-slate-900 dark:hover:text-slate-200 transition text-xs"
+            >
+              <span className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+                <span className="text-slate-600 dark:text-slate-400">Cari emiten</span>
+              </span>
+              <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded border border-slate-300 dark:border-white/10">
+                <Command className="w-2.5 h-2.5" /> K
+              </kbd>
+            </button>
+          </div>
+        )}
 
         {/* Right Tools & Toggles */}
         <div className="flex items-center gap-1.5 shrink-0 py-0.5">

@@ -117,6 +117,7 @@ describe("ScraperClient", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         source: "stockbit",
+        previous_close: 5750,
         candles: [
           {
             time: 1795485600,
@@ -137,6 +138,7 @@ describe("ScraperClient", () => {
     const result = await client.getChart("BBRI", "1D");
     expect(result?.source).toBe("stockbit");
     expect(result?.candles[0].close).toBe(5800);
+    expect(result?.previousClose).toBe(5750);
     expect(fetchMock.mock.calls[0][0]).toContain("/v1/stockbit/chart/BBRI");
     expect(fetchMock.mock.calls[0][0]).toContain("timeframe=1D");
   });

@@ -30,3 +30,8 @@
 - [x] Phase 3: UI limitations, data-source status, and Stockbit session banner <!-- id=28 priority=medium done=2026-11-23 created=2026-11-23 -->
 - [x] Optional Phase 2C: Stockbit full broker summary (needs owner session and ToS decision) <!-- id=29 priority=low done=2026-11-24 created=2026-11-23 -->
 - [x] Add live Stockbit chart page with Yahoo fallback <!-- id=30 priority=high done=2026-11-24 created=2026-11-24 -->
+- [x] Add Redis service and chart cache/pub-sub wiring <!-- id=31 priority=high done=2026-11-24 created=2026-11-24 -->
+- [x] Replace chart client polling with Redis-backed SSE stream <!-- id=32 priority=high done=2026-11-24 created=2026-11-24 -->
+- [x] Build navbar-style emiten search for the chart page <!-- id=33 priority=high done=2026-11-24 created=2026-11-24 -->
+- [x] Redesign chart page and smooth live candle updates <!-- id=34 priority=high done=2026-11-24 created=2026-11-24 -->
+- [•] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high created=2026-11-24 -->

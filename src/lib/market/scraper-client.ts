@@ -204,9 +204,23 @@ export class ScraperClient {
     };
   }
 
-  async getStockbitStatus(): Promise<{ configured: boolean; limitations?: string[] } | null> {
-    return this.get<{ configured: boolean; limitations?: string[] }>(
-      "/v1/stockbit/status"
-    );
+  async getStockbitStatus(): Promise<{
+    configured: boolean;
+    logged_in?: boolean;
+    expired?: boolean;
+    source?: string;
+    access_expires_at?: string | null;
+    refresh_expires_at?: string | null;
+    limitations?: string[];
+  } | null> {
+    return this.get<{
+      configured: boolean;
+      logged_in?: boolean;
+      expired?: boolean;
+      source?: string;
+      access_expires_at?: string | null;
+      refresh_expires_at?: string | null;
+      limitations?: string[];
+    }>("/v1/stockbit/status");
   }
 }

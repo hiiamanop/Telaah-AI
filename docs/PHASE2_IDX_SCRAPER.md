@@ -112,10 +112,28 @@ The session is a rotating refresh token. **The scraper must be the only process 
    ```
 6. After that, a full report should show `flowLens.status: available`, `coverage: full`, `source: stockbit`, and real top buyers/sellers.
 
-If the refresh token expires (roughly weekly), repeat the login. To clear it:
+If the refresh token expires (roughly weekly), repeat the login with the host helper. It reads the cookie from stdin and never writes it to the host:
+
 ```bash
-podman exec telaah-scraper python -m scraper.stockbit_login --clear
+./deploy/podman/stockbit-login.sh
 ```
+
+The script asks for the `credentialStorage` value, pipes it into the scraper, and clears the shell variable afterwards. It also supports:
+
+```bash
+./deploy/podman/stockbit-login.sh FILE.txt   # read the cookie from a file
+./deploy/podman/stockbit-login.sh --status   # inspect expiry only
+./deploy/podman/stockbit-login.sh --clear    # remove the stored session
+```
+
+The alert center checks the session every hour:
+
+```bash
+./deploy/podman/stockbit-session-check.sh dry   # preview, no Telegram
+./deploy/podman/stockbit-session-check.sh       # send if within 72h/24h
+```
+
+It sends one Telegram warning at 72 hours before the refresh token expires, another at 24 hours, and a critical message when the session is expired or missing. Dedupe keys use the token expiry so the hourly cron does not spam.
 
 If Stockbit is unavailable, `/v1/broker-summary` falls back to IPOT; if IPOT is also down, it returns `available: false` and the UI stays honest with foreign-flow-only FlowLens.
 

@@ -35,9 +35,9 @@
 - [x] Build navbar-style emiten search for the chart page <!-- id=33 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Redesign chart page and smooth live candle updates <!-- id=34 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high done=2026-11-24 created=2026-11-24 -->
-- [ ] Configure Cloudflare Access for telaah.hiiamanop.my.id (email OTP) and bypass /api/telegram/webhook <!-- id=36 priority=high created=2026-11-24 -->
+- [x] Configure Cloudflare Access for telaah.hiiamanop.my.id (email OTP) and bypass /api/telegram/webhook <!-- id=36 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Add app-level rate limits for /api/analyze, /api/qa, /api/compare, and /api/chart <!-- id=37 priority=high done=2026-11-24 created=2026-11-24 -->
-- [ ] Build Telegram alert center for watchlist (price, volume, foreign flow, bandar, harmonic PRZ) <!-- id=38 priority=high created=2026-11-24 -->
+- [x] Build Telegram alert center v1 (server watchlist, price, volume, breakout, foreign flow) <!-- id=38 priority=high done=2026-11-24 created=2026-11-24 -->
 - [ ] Add Stockbit session expiry alert and one-command relogin runbook <!-- id=39 priority=high created=2026-11-24 -->
 - [ ] Write robo-trade design: signals, risk limits, fees, paper-first; live broker execution blocked until API access <!-- id=40 priority=high created=2026-11-24 -->
 - [ ] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium created=2026-11-24 -->
@@ -46,3 +46,4 @@
 - [ ] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium created=2026-11-24 -->
 - [ ] Build robo-trade backtest engine (IDX fees, slippage, lot/tick rules) <!-- id=45 priority=medium created=2026-11-24 -->
 - [ ] Build robo-trade paper runner and Telegram trade journal <!-- id=46 priority=low created=2026-11-24 -->
+- [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->

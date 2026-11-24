@@ -22,8 +22,15 @@ export interface TelegramHandlerUpdate {
   message?: TelegramMessage;
 }
 
+export interface TelegramAlertDeps {
+  list(): Promise<string[]>;
+  add(symbol: string): Promise<string[]>;
+  remove(symbol: string): Promise<string[]>;
+}
+
 export interface TelegramHandlerDeps {
   config: TelegramConfig;
+  alerts?: TelegramAlertDeps;
   sendMessage: (chatId: string | number, text: string) => Promise<void>;
   analyze: (input: {
     prompt: string;
@@ -73,6 +80,9 @@ function helpMessage(): string {
     "• <code>/analisis TLKM risiko utamanya apa?</code> — analisis dengan pertanyaan spesifik",
     "• <code>/brief</code> — harmonic brief 4H/1D/1W/1M sekarang",
     "• <code>/brief refresh</code> — paksa scan baru, abaikan cache",
+    "• <code>/watch BBCA</code> — pantau emiten untuk alert",
+    "• <code>/unwatch BBCA</code> — berhenti memantau emiten",
+    "• <code>/watchlist</code> — lihat daftar alert",
     "• <code>/id</code> — lihat user ID dan chat ID",
     "",
     "Kalau sudah pernah analisis satu saham, kamu bisa lanjut bertanya tanpa menyebut kodenya lagi — misalnya <code>risiko utamanya apa?</code>.",
@@ -167,6 +177,51 @@ export async function handleTelegramUpdate(
   if (command === "id") {
     await send(
       `User ID: <code>${message.from?.id ?? "—"}</code>\nChat ID: <code>${chatId}</code>`
+    );
+    return;
+  }
+  if (command === "watch" || command === "unwatch") {
+    if (!deps.alerts) {
+      await send("Fitur alert belum aktif di server ini.");
+      return;
+    }
+    const raw = args.join(" ").trim();
+    const symbol =
+      extractValidTickers(raw)[0] ?? raw.toUpperCase().replace(".JK", "");
+    if (!/^[A-Z]{4}$/.test(symbol)) {
+      await send("Tulis kode emiten 4 huruf. Contoh: <code>/watch BBCA</code>.");
+      return;
+    }
+    try {
+      const symbols =
+        command === "watch"
+          ? await deps.alerts.add(symbol)
+          : await deps.alerts.remove(symbol);
+      const verb = command === "watch" ? "dipantau" : "dihentikan";
+      await send(
+        `<b>${symbol}</b> ${verb}.\nWatchlist alert: ${
+          symbols.length ? symbols.map((item) => `<code>${item}</code>`).join(", ") : "kosong"
+        }`
+      );
+    } catch (error) {
+      await send(
+        `Gagal memperbarui watchlist: ${
+          error instanceof Error ? error.message : "coba lagi."
+        }`
+      );
+    }
+    return;
+  }
+  if (command === "watchlist") {
+    if (!deps.alerts) {
+      await send("Fitur alert belum aktif di server ini.");
+      return;
+    }
+    const symbols = await deps.alerts.list();
+    await send(
+      symbols.length
+        ? `<b>Watchlist alert</b>\n${symbols.map((item) => `• <code>${item}</code>`).join("\n")}`
+        : "Watchlist alert masih kosong. Tambah dengan <code>/watch BBCA</code>."
     );
     return;
   }

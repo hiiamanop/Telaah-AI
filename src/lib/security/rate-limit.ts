@@ -21,6 +21,8 @@ export const RATE_LIMIT_RULES = {
   chart: { limit: 120, windowMs: 60_000 },
   chartStream: { limit: 30, windowMs: 60_000 },
   translate: { limit: 120, windowMs: 60_000 },
+  alerts: { limit: 60, windowMs: 60_000 },
+  alertsRun: { limit: 6, windowMs: 60_000 },
 } satisfies Record<string, RateLimitRule>;
 
 const REDIS_PREFIX = "telaah:rl:";

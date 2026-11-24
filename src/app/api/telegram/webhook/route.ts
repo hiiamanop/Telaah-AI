@@ -9,6 +9,11 @@ import {
   type TelegramHandlerUpdate,
 } from "@/lib/telegram/handler";
 import { getLastSymbol, setLastSymbol } from "@/lib/telegram/state";
+import {
+  addAlertSymbol,
+  loadAlertWatchlist,
+  removeAlertSymbol,
+} from "@/lib/alerts/store";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +86,11 @@ export async function POST(req: NextRequest) {
       },
       getLastSymbol,
       setLastSymbol,
+      alerts: {
+        list: async () => (await loadAlertWatchlist()).symbols,
+        add: (symbol) => addAlertSymbol(symbol),
+        remove: (symbol) => removeAlertSymbol(symbol),
+      },
     });
   } catch (error) {
     console.error("Telegram webhook handler failed:", error);

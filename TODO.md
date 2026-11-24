@@ -35,3 +35,5 @@
 - [x] Build navbar-style emiten search for the chart page <!-- id=33 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Redesign chart page and smooth live candle updates <!-- id=34 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high done=2026-11-24 created=2026-11-24 -->
+- [ ] Configure Cloudflare Access for telaah.hiiamanop.my.id (email OTP) and bypass /api/telegram/webhook <!-- id=36 priority=high created=2026-11-24 -->
+- [ ] Add app-level rate limits for /api/analyze, /api/qa, /api/compare, and /api/chart <!-- id=37 priority=high created=2026-11-24 -->

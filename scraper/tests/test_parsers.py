@@ -126,6 +126,23 @@ class InsiderParserTests(unittest.TestCase):
         self.assertEqual(result["share_percentage_before"], 0.001)
         self.assertFalse(result["unparsed"])
 
+    def test_parses_a_table_split_across_lines(self):
+        text = OWNERSHIP_TEXT.replace(
+            "Pembelian Tidak Langsung - - - 379.428,00 Saham Biasa 6.982,00 25- Mar- 2026 Investasi jangka panjang",
+            "Pembelian Tidak Langsung - - - 379.428,00 Saham \nBiasa 6.982,00 25-Mar-\n2026 Investasi jangka panjang",
+        )
+        result = parse_ownership_text(
+            text,
+            symbol="BBCA",
+            title="LAPORAN KEPEMILIKAN SAHAM",
+            announcement_date="2026-03-26",
+            filing_id="20260326-1",
+            attachment_url="https://www.idx.co.id/file.pdf",
+        )
+        self.assertEqual(result["amount_transaction"], 379_428)
+        self.assertEqual(result["price"], 6_982)
+        self.assertEqual(result["date"], "2026-03-25")
+
 
 if __name__ == "__main__":
     unittest.main()

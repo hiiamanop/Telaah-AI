@@ -2,11 +2,12 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from scrapling.fetchers import Fetcher
+from scrapling.fetchers import Fetcher, StealthySession
 
 from .cache import TTLCache
 from .errors import UpstreamError
@@ -29,7 +30,95 @@ HEADERS = {
 CACHE = TTLCache()
 CACHE_TTL_SECONDS = int(os.getenv("IDX_CACHE_TTL_SECONDS", "900"))
 REQUEST_TIMEOUT_SECONDS = int(os.getenv("IDX_REQUEST_TIMEOUT_SECONDS", "30"))
+STEALTH_TIMEOUT_SECONDS = int(os.getenv("IDX_STEALTH_TIMEOUT_SECONDS", "90"))
+STEALTH_ENABLED = os.getenv("IDX_STEALTH_ENABLED", "true").lower() != "false"
 OWNERSHIP_TITLE = "KEPEMILIKAN"
+STEALTH_LOCK = threading.Lock()
+
+
+def _stealth_session():
+    if not STEALTH_ENABLED:
+        raise UpstreamError(
+            "IDX memblokir request dan stealth browser dimatikan.",
+            kind="blocked",
+        )
+    return StealthySession(
+        headless=True,
+        solve_cloudflare=True,
+        timeout=STEALTH_TIMEOUT_SECONDS,
+    )
+
+
+def _fetch_with_stealth(url: str):
+    """Last-resort browser fetch for a Cloudflare challenge.
+
+    One browser at a time: a cold scan can otherwise launch several Chromium
+    instances in parallel and exhaust the container.
+    """
+    with STEALTH_LOCK:
+        try:
+            with _stealth_session() as session:
+                page = session.fetch(url)
+        except UpstreamError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise UpstreamError(
+                f"Stealth browser gagal: {exc}", kind="blocked"
+            ) from exc
+
+    if page.status != 200:
+        kind = "blocked" if page.status == 403 else "provider"
+        raise UpstreamError(
+            f"IDX stealth membalas HTTP {page.status}.", kind=kind
+        )
+    return page
+
+
+def _fetch_pdf_with_stealth(url: str) -> bytes:
+    """Capture the raw PDF from the browser's PDF viewer.
+
+    Navigating to an IDX PDF returns Chrome's viewer HTML, not the document.
+    Listen for the application/pdf network response and return its bytes.
+    """
+    captured: list[bytes] = []
+
+    with STEALTH_LOCK:
+        try:
+            with _stealth_session() as session:
+                page = session.context.new_page()
+
+                def on_response(response) -> None:
+                    try:
+                        content_type = response.headers.get("content-type", "")
+                        if "application/pdf" not in content_type.lower():
+                            return
+                        body = response.body()
+                        if body.startswith(b"%PDF"):
+                            captured.append(body)
+                    except Exception:  # noqa: BLE001
+                        return
+
+                page.on("response", on_response)
+                try:
+                    page.goto(url, wait_until="networkidle", timeout=12_000)
+                except Exception:  # noqa: BLE001 - the viewer can stay busy
+                    pass
+
+                deadline = time.time() + 4
+                while not captured and time.time() < deadline:
+                    time.sleep(0.5)
+
+                page.close()
+        except UpstreamError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise UpstreamError(
+                f"Stealth PDF browser gagal: {exc}", kind="blocked"
+            ) from exc
+
+    if not captured:
+        raise UpstreamError("IDX tidak mengembalikan PDF yang valid.", kind="blocked")
+    return captured[0]
 
 
 def _date_only(value: Any) -> str | None:
@@ -80,21 +169,32 @@ def fetch_json(url: str, cache_key: str | None = None) -> dict[str, Any]:
         if page.status == 200:
             break
         if page.status == 403:
-            raise UpstreamError("IDX menolak request (Cloudflare 403).", kind="blocked")
+            break
         if page.status in (429, 500, 502, 503, 504) and attempt < 2:
             time.sleep(0.8 * (attempt + 1))
             continue
-        raise UpstreamError(f"IDX membalas HTTP {page.status}.", kind="provider")
+        break
 
     if page is None:
         raise UpstreamError(
             f"IDX request gagal: {last_error or 'unknown'}", kind="network"
         )
+
+    if page.status != 200:
+        if page.status in (403, 429, 500, 502, 503, 504):
+            page = _fetch_with_stealth(url)
+        else:
+            raise UpstreamError(f"IDX membalas HTTP {page.status}.", kind="provider")
     if page.status != 200:
         raise UpstreamError(f"IDX membalas HTTP {page.status}.", kind="provider")
 
+    body = bytes(page.body or b"")
+    if body.lstrip().startswith(b"<"):
+        page = _fetch_with_stealth(url)
+        body = bytes(page.body or b"")
+
     try:
-        payload = json.loads(page.body)
+        payload = json.loads(body)
     except Exception as exc:  # noqa: BLE001
         raise UpstreamError("IDX mengembalikan JSON tidak valid.", kind="provider") from exc
 
@@ -119,14 +219,22 @@ def fetch_bytes(url: str, cache_key: str | None = None) -> bytes:
             },
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
-    except Exception as exc:  # noqa: BLE001
-        raise UpstreamError(f"IDX PDF request gagal: {exc}", kind="network") from exc
+    except Exception:  # noqa: BLE001
+        page = _fetch_with_stealth(url)
 
+    if page.status != 200:
+        page = _fetch_with_stealth(url)
     if page.status != 200:
         raise UpstreamError(
             f"IDX PDF membalas HTTP {page.status}.", kind="provider"
         )
+
     body = bytes(page.body or b"")
+    # Cloudflare can return its HTML challenge with a 200 status. A real PDF
+    # starts with %PDF; otherwise capture it from the browser's PDF viewer.
+    if not body.startswith(b"%PDF"):
+        body = _fetch_pdf_with_stealth(url)
+
     if cache_key:
         CACHE.set(cache_key, body, CACHE_TTL_SECONDS)
     return body

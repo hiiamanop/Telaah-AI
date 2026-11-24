@@ -48,3 +48,8 @@ data/brief.log
 __pycache__/
 *.pyc
 .venv/
+
+# Stockbit rotating session (never commit)
+data/stockbit_session.json
+data/stockbit_session.lock
+data/stockbit_session.tmp

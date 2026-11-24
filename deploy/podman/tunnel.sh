@@ -20,6 +20,7 @@ podman rm -f telaah-tunnel >/dev/null 2>&1 || true
 podman run -d \
   --pod telaah-pod \
   --name telaah-tunnel \
+  --restart=unless-stopped \
   --env "TUNNEL_TOKEN=$TOKEN" \
   docker.io/cloudflare/cloudflared:latest \
   tunnel --no-autoupdate run

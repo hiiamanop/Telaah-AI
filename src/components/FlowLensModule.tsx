@@ -75,6 +75,11 @@ export const FlowLensModule: React.FC<FlowLensModuleProps> = ({ flowLens }) => {
             <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
               {flowLens.totalTradingDays} Hari Bursa
             </span>
+            {flowLens.source && (
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/30">
+                {flowLens.source === "stockbit" ? "Stockbit" : "IPOT"}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Rentang: <span className="font-mono text-slate-700 dark:text-slate-300">{flowLens.startDate}</span> s.d.{" "}

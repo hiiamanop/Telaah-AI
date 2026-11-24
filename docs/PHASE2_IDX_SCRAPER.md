@@ -86,6 +86,39 @@ Useful commands:
 ./deploy/podman/stop.sh
 ```
 
+## Stockbit broker summary (optional)
+
+Stockbit is the source for **full per-stock broker summary** — every broker, not only IPOT's top 10. It uses your own Stockbit session. It is unofficial and may conflict with Stockbit's Terms; use it personally and at your own risk.
+
+The session is a rotating refresh token. **The scraper must be the only process that refreshes it.** Do not point the same session at another bot or keep using it in the Stockbit web app.
+
+1. Open a private browser window and sign in at `https://stockbit.com/login`. Complete password/OTP yourself; never share the password or OTP.
+2. DevTools → Application → Cookies → `https://stockbit.com` → copy the value of **`credentialStorage`**.
+3. Save it to a temporary file, e.g. `data/stockbit_credential.txt`, then:
+   ```bash
+   podman cp data/stockbit_credential.txt telaah-scraper:/tmp/stockbit_cookie
+   podman exec telaah-scraper python -m scraper.stockbit_login --file /tmp/stockbit_cookie
+   rm -f data/stockbit_credential.txt
+   ```
+   The helper validates the session with Stockbit, writes `data/stockbit_session.json` with mode `0600`, and never prints the token.
+4. Set `SCRAPER_BROKER_SUMMARY_ENABLED=true` in `.env`, then restart the pod:
+   ```bash
+   ./deploy/podman/up.sh
+   ```
+5. Check:
+   ```bash
+   podman exec telaah-scraper python -m scraper.stockbit_login --status
+   curl -s "http://127.0.0.1:8001/v1/broker-summary/BBRI?days=14" | python3 -m json.tool
+   ```
+6. After that, a full report should show `flowLens.status: available`, `coverage: full`, `source: stockbit`, and real top buyers/sellers.
+
+If the refresh token expires (roughly weekly), repeat the login. To clear it:
+```bash
+podman exec telaah-scraper python -m scraper.stockbit_login --clear
+```
+
+If Stockbit is unavailable, `/v1/broker-summary` falls back to IPOT; if IPOT is also down, it returns `available: false` and the UI stays honest with foreign-flow-only FlowLens.
+
 ## Verification
 
 ```bash

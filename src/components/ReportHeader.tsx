@@ -282,7 +282,10 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
             Insider {insiderSource}
           </span>
           {report.flowLens?.coverage === "none" && (
-            <span className="px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono">
+            <span
+              className="px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono"
+              title="Broker summary belum aktif: IPOT sedang down dan Stockbit belum dikonfigurasi."
+            >
               Broker N/A
             </span>
           )}

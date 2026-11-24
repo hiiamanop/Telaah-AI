@@ -15,6 +15,9 @@ export async function classifyInputAndExtractClaims(rawInput: string): Promise<C
 Tugas:
 1. Ambil 1 kode saham IDX 4 huruf kapital (misal: BBCA, BBRI, GOTO, TLKM, ASII, BMRI).
    Jika pengguna menyebut nama perusahaan ("Bank BCA"), ubah ke simbolnya (BBCA).
+   Jangan menganggap kata umum lowercase seperti "bank" sebagai ticker jika konteksnya sektor
+   ("emiten bank", "saham bank"). Untuk permintaan daftar/rekomendasi sektor tanpa ticker
+   eksplisit, isi symbol dengan null dan isAmbiguous true.
 2. Tentukan intensitas/tipe input: "claim_check" | "news_event" | "company_overview" | "thesis_review" | "market_technical".
 3. Ekstrak klaim-klaim spesifik yang ingin diuji sebagai array string (maksimal 5 klaim).
 

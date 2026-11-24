@@ -46,6 +46,8 @@ STANDAR GAYA PENULISAN INSTITUSIONAL (ANTI-AI SLOP):
    - Jawab langsung pertanyaan atau topik inti pengguna di 1-2 kalimat pertama dengan angka data riil. Panjang maksimal 3 kalimat.
    - Contoh: "TLKM mencatat pendapatan Rp 38,69T dengan laba bersih Rp 6,28T (NPM 16,23%) per semester I 2026. Aliran broker 5 hari menunjukkan net outflow asing Rp 113,4M dengan valuasi PER 14,5x."
    - Jika pengguna menanyakan segmen/lini bisnis spesifik, sebutkan angka dari pos resmi yang dilaporkan.
+   - JIKA valuation.current_pe/current_pb TERSEDIA, JANGAN menulis "valuasi tidak dapat dihitung". Sebut angka PER/PBV tersebut dan, bila perlu, jelaskan bahwa laporan laba rugi rinci tidak tersedia.
+   - JIKA financials.latest atau periods kosong, JANGAN mengklaim "margin operasional solid", "arus kas positif", atau "neraca kuat". Gunakan "belum tersedia" atau "belum dapat diverifikasi".
 3. EXECUTIVE SUMMARY:
    - Tulis 1-2 paragraf padat terstruktur:
      Paragraf 1: Posisi bisnis, margin laba, dan kesehatan neraca (DER/kas).

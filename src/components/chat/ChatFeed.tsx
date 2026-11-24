@@ -28,6 +28,8 @@ interface ChatFeedProps {
   onOpenDeepDive: (report: CompanyIntelligenceReport) => void;
   onOpenSymbolTerminal?: (symbol: string) => void;
   onOpenShareCard?: (report: CompanyIntelligenceReport) => void;
+  onOpenTradingPlan?: (report: CompanyIntelligenceReport) => void;
+  onOpenDividendCalc?: (report: CompanyIntelligenceReport) => void;
 }
 
 const STARTER_PROMPTS = [
@@ -61,6 +63,8 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
   onOpenDeepDive,
   onOpenSymbolTerminal,
   onOpenShareCard,
+  onOpenTradingPlan,
+  onOpenDividendCalc,
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -176,6 +180,16 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
                   onShare={() => {
                     if (onOpenShareCard && msg.stockCard?.report) {
                       onOpenShareCard(msg.stockCard.report);
+                    }
+                  }}
+                  onOpenTradingPlan={() => {
+                    if (onOpenTradingPlan && msg.stockCard?.report) {
+                      onOpenTradingPlan(msg.stockCard.report);
+                    }
+                  }}
+                  onOpenDividendCalc={() => {
+                    if (onOpenDividendCalc && msg.stockCard?.report) {
+                      onOpenDividendCalc(msg.stockCard.report);
                     }
                   }}
                 />

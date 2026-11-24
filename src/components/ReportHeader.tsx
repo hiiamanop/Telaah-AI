@@ -94,7 +94,8 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
     : "-";
 
   const integrity = report.integrity;
-  const score = integrity?.score ?? 85;
+  const hasFinancials = Boolean(report.financials?.latest);
+  const score = integrity?.score ?? 0;
   const verdict = integrity?.verdict ?? "Fakta Solid";
   const displayVerdict = integrity?.confidence === "low" ? "Data Terbatas" : verdict;
 
@@ -476,15 +477,20 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({
               </span>
             </div>
             <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              integrity?.riskCount.danger === 0
-                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
-                : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
+              !hasFinancials
+                ? "bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400"
+                : integrity?.riskCount.danger === 0
+                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
             }`}>
-              {integrity?.riskCount.danger === 0 ? "Laba Riil Kuat" : "Perlu Pantauan"}
+              {!hasFinancials ? "Data Terbatas" : integrity?.riskCount.danger === 0 ? "Laba Riil Kuat" : "Perlu Pantauan"}
             </span>
           </div>
           <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-            {report.financials?.solvencyHealth?.description || "Arus kas operasi positif dan menopang pertumbuhan bisnis."}
+            {report.financials?.solvencyHealth?.description ||
+              (hasFinancials
+                ? "Arus kas operasi positif dan menopang pertumbuhan bisnis."
+                : "Laporan keuangan rinci belum tersedia; kesehatan bisnis belum dapat diverifikasi.")}
           </p>
         </div>
 

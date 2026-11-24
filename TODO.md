@@ -34,4 +34,4 @@
 - [x] Replace chart client polling with Redis-backed SSE stream <!-- id=32 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Build navbar-style emiten search for the chart page <!-- id=33 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Redesign chart page and smooth live candle updates <!-- id=34 priority=high done=2026-11-24 created=2026-11-24 -->
-- [•] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high created=2026-11-24 -->
+- [x] Verify Redis/SSE live feed, tests, build, and deploy <!-- id=35 priority=high done=2026-11-24 created=2026-11-24 -->

@@ -76,6 +76,8 @@ describe("ScraperClient", () => {
       fetchImpl: vi.fn().mockResolvedValue(
         jsonResponse({
           symbol: "BBRI",
+          start: "2026-11-11",
+          end: "2026-11-24",
           source: "stockbit",
           coverage: "full",
           data: [
@@ -105,6 +107,8 @@ describe("ScraperClient", () => {
     const result = await client.getBrokerSummary("BBRI");
     expect(result?.source).toBe("stockbit");
     expect(result?.coverage).toBe("full");
+    expect(result?.start).toBe("2026-11-11");
+    expect(result?.end).toBe("2026-11-24");
     expect(result?.data[0].summary[0].broker_code).toBe("KZ");
     expect(result?.data[0].summary[0].nval).toBe(400_000_000);
   });

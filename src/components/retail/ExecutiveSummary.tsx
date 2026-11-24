@@ -259,20 +259,20 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
       </div>
 
       {/* 4. FAST ACTION CENTER: TRADING PLAN & TOOLS */}
-      <div className="p-4 rounded-xl bg-black dark:bg-linear-to-r dark:from-slate-900 dark:to-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-        <div className="space-y-0.5 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2">
-            <Crosshair className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-bold text-xs text-white">
+      <div className="p-4 rounded-xl bg-black dark:bg-linear-to-r dark:from-slate-900 dark:to-slate-800 text-white flex flex-col items-stretch gap-3 shadow-md">
+        <div className="min-w-0 space-y-0.5 text-left">
+          <div className="flex items-center justify-start gap-2">
+            <Crosshair className="w-4 h-4 text-emerald-400 shrink-0" />
+            <h3 className="font-bold text-xs text-white leading-snug">
               {t("summary.readyTitle", "Siap Eksekusi? Gunakan Trading Plan & Kalkulator")}
             </h3>
           </div>
-          <p className="text-[11px] text-slate-300 max-w-md">
+          <p className="text-[11px] text-slate-300 max-w-md leading-snug">
             {t("summary.readySubtitle", "Dapatkan area beli ideal, batas cut loss, target profit multi-horizon, dan simulasi alokasi lot otomatis.")}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex w-full max-w-full flex-wrap items-center justify-start gap-2">
           {report.tradingPlan && onOpenTradingPlan && (
             <button
               onClick={onOpenTradingPlan}
@@ -294,8 +294,12 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({
               <span>{t("summary.openDividend", "Kalkulator Dividen")}</span>
             </button>
           ) : (
-            <span className="text-[10px] text-slate-400">
-              Kalkulator dividen tidak ditampilkan: emiten ini belum membagikan dividen pada data tersedia.
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] leading-snug text-slate-400"
+              title="Emiten ini belum membagikan dividen pada data yang tersedia."
+            >
+              <Calculator className="w-3.5 h-3.5 shrink-0" />
+              <span>Kalkulator dividen tidak tersedia</span>
             </span>
           )}
         </div>

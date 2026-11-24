@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMarketProvider } from "@/lib/market";
+import {
+  RATE_LIMIT_RULES,
+  guardRateLimit,
+} from "@/lib/security/rate-limit";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 
@@ -28,6 +32,9 @@ export interface StockCompareResult {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await guardRateLimit(req, "compare", RATE_LIMIT_RULES.compare);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     let symbolA = body.symbolA?.trim()?.toUpperCase()?.replace(".JK", "");

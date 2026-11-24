@@ -23,6 +23,21 @@ export interface ScraperClientOptions {
   timeoutMs?: number;
 }
 
+export interface ChartCandle {
+  time: number;
+  date?: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface ScraperChart {
+  candles: ChartCandle[];
+  source: string;
+}
+
 export interface ScraperInsiderFeed {
   results: FilingItem[];
   source?: string;
@@ -96,6 +111,21 @@ export class ScraperClient {
       `/v1/idx/foreign-flow/${encodeURIComponent(symbol)}`,
       { symbol, length }
     );
+  }
+
+  async getChart(
+    symbol: string,
+    timeframe: "1D" | "1W" | "1Y" | "5Y"
+  ): Promise<ScraperChart | null> {
+    const result = await this.get<{
+      candles?: ChartCandle[];
+      source?: string;
+    }>(`/v1/stockbit/chart/${encodeURIComponent(symbol)}`, { timeframe });
+    if (!result?.candles?.length) return null;
+    return {
+      candles: result.candles,
+      source: result.source ?? "stockbit",
+    };
   }
 
   async getProfile(symbol: string): Promise<IdxProfile | null> {

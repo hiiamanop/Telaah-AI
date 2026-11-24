@@ -1,7 +1,13 @@
 import unittest
+from unittest import mock
 from urllib.parse import quote
 
-from scraper.stockbit import parse_broker_summary, parse_credential_storage
+from scraper.stockbit import (
+    CHART_CACHE,
+    get_chart,
+    parse_broker_summary,
+    parse_credential_storage,
+)
 
 ACCESS = "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjQwMDAwMDAwMDAsInR5cGUiOiJhY2Nlc3MifQ.signature"
 REFRESH = "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjQwMDAwMDAwMDAsInR5cGUiOiJyZWZyZXNoIn0.signature"
@@ -80,6 +86,83 @@ class BrokerSummaryTests(unittest.TestCase):
         self.assertEqual(rows["KZ"]["nval"], 600000)
         self.assertEqual(rows["CC"]["nlot"], -6)
         self.assertEqual(result["data"][0]["date"], "2026-11-06")
+
+
+class ChartTests(unittest.TestCase):
+    def setUp(self):
+        CHART_CACHE.clear()
+
+    def test_maps_daily_candles_and_deduplicates(self):
+        payload = {
+            "data": {
+                "prices": [
+                    {
+                        "date": "1795399200000",
+                        "value": "5750",
+                        "open": "5700",
+                        "high": "5800",
+                        "low": "5650",
+                        "volume": "1200",
+                    },
+                    {
+                        "date": "1795485600000",
+                        "value": "5800",
+                        "open": "5750",
+                        "high": "5850",
+                        "low": "5700",
+                        "volume": "2400",
+                    },
+                    {
+                        "date": "1795485600000",
+                        "value": "5800",
+                        "open": "5750",
+                        "high": "5850",
+                        "low": "5700",
+                        "volume": "2400",
+                    },
+                ]
+            }
+        }
+        with mock.patch("scraper.stockbit._request_json", return_value=payload) as request:
+            result = get_chart("bbca", "1Y")
+
+        self.assertEqual(result["symbol"], "BBCA")
+        self.assertEqual(result["source"], "stockbit")
+        self.assertEqual(len(result["candles"]), 2)
+        self.assertEqual(result["candles"][0]["time"], 1795399200)
+        self.assertEqual(result["candles"][0]["close"], 5750)
+        self.assertEqual(result["candles"][0]["volume"], 120000)
+        self.assertEqual(result["last"]["close"], 5800)
+        request.assert_called_once_with(
+            "/charts/BBCA/daily",
+            {"timeframe": "1y", "chart_type": "PRICE_CHART_TYPE_CANDLE"},
+        )
+
+    def test_intraday_keeps_only_latest_session(self):
+        payload = {
+            "data": {
+                "prices": [
+                    {"date": "1795399200000", "value": "5700", "volume": "10"},
+                    {"date": "1795485600000", "value": "5750", "volume": "20"},
+                    {"date": "1795489200000", "value": "5780", "volume": "30"},
+                ]
+            }
+        }
+        with mock.patch("scraper.stockbit._request_json", return_value=payload):
+            result = get_chart("BBCA", "1D")
+
+        self.assertEqual(len(result["candles"]), 2)
+        self.assertEqual(result["candles"][-1]["close"], 5780)
+
+    def test_empty_payload_reports_limitation(self):
+        with mock.patch(
+            "scraper.stockbit._request_json", return_value={"data": {"prices": []}}
+        ):
+            result = get_chart("BBCA", "5Y")
+
+        self.assertEqual(result["candles"], [])
+        self.assertIsNone(result["last"])
+        self.assertTrue(result["limitations"])
 
 
 if __name__ == "__main__":

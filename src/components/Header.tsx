@@ -48,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navLinks = [
     { href: "/", label: t("nav.terminal", "Terminal") },
     { href: "/watchlist", label: t("nav.watchlist", "Watchlist") },
+    { href: "/chart", label: t("nav.chart", "Chart") },
   ];
 
   return (

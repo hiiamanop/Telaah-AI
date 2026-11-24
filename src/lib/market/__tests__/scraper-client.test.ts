@@ -113,6 +113,42 @@ describe("ScraperClient", () => {
     expect(result?.data[0].summary[0].nval).toBe(400_000_000);
   });
 
+  it("maps Stockbit chart candles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        source: "stockbit",
+        candles: [
+          {
+            time: 1795485600,
+            date: "2026-11-24",
+            open: 5750,
+            high: 5850,
+            low: 5700,
+            close: 5800,
+            volume: 240000,
+          },
+        ],
+      })
+    );
+    const client = new ScraperClient({
+      baseUrl: "http://scraper:8001",
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    });
+    const result = await client.getChart("BBRI", "1D");
+    expect(result?.source).toBe("stockbit");
+    expect(result?.candles[0].close).toBe(5800);
+    expect(fetchMock.mock.calls[0][0]).toContain("/v1/stockbit/chart/BBRI");
+    expect(fetchMock.mock.calls[0][0]).toContain("timeframe=1D");
+  });
+
+  it("returns null when a chart has no candles", async () => {
+    const client = new ScraperClient({
+      baseUrl: "http://scraper:8001",
+      fetchImpl: vi.fn().mockResolvedValue(jsonResponse({ candles: [] })) as any,
+    });
+    expect(await client.getChart("BBCA", "1Y")).toBeNull();
+  });
+
   it("returns null instead of throwing when the scraper is down", async () => {
     const client = new ScraperClient({
       baseUrl: "http://scraper:8001",

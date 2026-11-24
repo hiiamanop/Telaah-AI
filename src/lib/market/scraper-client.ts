@@ -150,6 +150,8 @@ export class ScraperClient {
   async getBrokerSummary(symbol: string): Promise<BrokerSummaryResponse | null> {
     const result = await this.get<{
       available?: boolean;
+      start?: string;
+      end?: string;
       data?: BrokerSummaryResponse["data"];
       source?: BrokerSummaryResponse["source"];
       coverage?: BrokerSummaryResponse["coverage"];
@@ -161,6 +163,8 @@ export class ScraperClient {
     if (!Array.isArray(result.data) || result.data.length === 0) return null;
     return {
       symbol,
+      start: result.start,
+      end: result.end,
       data: result.data,
       source: result.source ?? "stockbit",
       coverage: result.coverage ?? "full",

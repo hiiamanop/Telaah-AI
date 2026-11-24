@@ -134,8 +134,24 @@ export function analyzeFlowLens(
 
   let totalTurnover = 0;
   const days = brokerSummaryData.data;
-  const startDate = days[0]?.date || brokerSummaryData.start || "";
-  const endDate = days[days.length - 1]?.date || brokerSummaryData.end || "";
+  const startDate = brokerSummaryData.start || days[0]?.date || "";
+  const endDate = brokerSummaryData.end || days[days.length - 1]?.date || "";
+  const countWeekdays = (start: string, end: string): number => {
+    if (!start || !end) return days.length;
+    const cursor = new Date(`${start}T00:00:00Z`);
+    const last = new Date(`${end}T00:00:00Z`);
+    if (!Number.isFinite(cursor.getTime()) || !Number.isFinite(last.getTime())) {
+      return days.length;
+    }
+    let count = 0;
+    while (cursor <= last) {
+      const weekday = cursor.getUTCDay();
+      if (weekday !== 0 && weekday !== 6) count += 1;
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return count || days.length;
+  };
+  const tradingDays = countWeekdays(startDate, endDate);
 
   for (const day of days) {
     for (const item of day.summary) {
@@ -280,7 +296,7 @@ export function analyzeFlowLens(
     source: brokerSummaryData.source,
     startDate,
     endDate,
-    totalTradingDays: days.length,
+    totalTradingDays: tradingDays,
     totalTurnover,
     topBuyers,
     topSellers,

@@ -15,6 +15,15 @@ Build a rules-based IDX trading assistant that can:
 
 The product is a research and execution assistant, not a promise of returns.
 
+## 1a. Selected v1 strategy: BSJP daily
+
+The first strategy is **BSJP (beli sore, jual pagi)**: buy near the close,
+hold overnight, sell at the next morning open. The detailed rules, costs, and
+backtest assumptions are in [BSJP_DAILY.md](BSJP_DAILY.md).
+
+This choice replaces the open holding-period question. Swing and intraday
+strategies remain out of scope for v1.
+
 ## 2. Hard constraints
 
 - The connected Stockbit session has no securities account (`acn` is empty).
@@ -191,7 +200,7 @@ Until then, the only executable mode is `paper`.
 ## 12. Open decisions
 
 - Universe: liquid IDX only, or the full watchlist?
-- Holding period: swing 5-20 days or intraday?
+- Holding period: resolved, BSJP daily (buy close, sell next open).
 - Data source: Yahoo daily plus Stockbit flow, or paid real-time feed?
 - Broker: which API is actually available and what are its terms?
 - Capital and maximum acceptable drawdown?

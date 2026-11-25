@@ -44,7 +44,8 @@
 - [ ] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium created=2026-11-24 -->
 - [ ] Build IDX screener with fundamental/technical/flow filters and saved presets <!-- id=43 priority=medium created=2026-11-24 -->
 - [ ] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium created=2026-11-24 -->
-- [ ] Build robo-trade backtest engine (IDX fees, slippage, lot/tick rules) <!-- id=45 priority=medium created=2026-11-24 -->
-- [ ] Build robo-trade paper runner and Telegram trade journal <!-- id=46 priority=low created=2026-11-24 -->
+- [ ] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high created=2026-11-24 -->
+- [ ] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high created=2026-11-24 -->
 - [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->
-- [ ] Review and approve robo-trade design (universe, holding period, broker, capital) <!-- id=48 priority=high created=2026-11-24 -->
+- [ ] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
+- [ ] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high created=2026-11-25 -->

@@ -46,6 +46,7 @@ data/brief.log
 data/alerts.log
 data/stockbit-session.log
 data/bsjp.log
+data/backtests/
 data/alert_watchlist.json
 
 # python scraper

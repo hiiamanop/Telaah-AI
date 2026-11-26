@@ -59,6 +59,10 @@ current BSJP rules.
 
 The result does not prove BSJP can never work. It proves that this exact
 close-to-next-open implementation, with these filters and costs, does not.
+A follow-up signal study tested momentum, reversal, breakout, random, and
+next-close exits: [BSJP_SIGNAL_RESEARCH_2026-11-26.md](BSJP_SIGNAL_RESEARCH_2026-11-26.md).
+Reversal was the best variant but still lost after costs.
+
 The next tests must change the structure, not only the thresholds:
 
 - use an actual 15:50 snapshot instead of the daily close,

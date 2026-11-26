@@ -116,6 +116,12 @@ the acceptance criteria; the rules need work before paper trading is promoted.
 
 ## 10. Paper trading
 
+The forward paper journal is documented in
+[BSJP_PAPER.md](BSJP_PAPER.md). It records actual 15:50 entries and 09:00 exits
+for JII70 syariah candidates. Historical 15:50/09:00 snapshots are not
+available from the current data sources.
+
+
 - Generate the candidate list at 15:45 WIB.
 - Record the intended entry and the actual 15:50 price.
 - Record the next-open exit and the actual fill.

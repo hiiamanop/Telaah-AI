@@ -7,7 +7,11 @@ import {
 } from "@/lib/bsjp/backtest";
 
 export type ResearchSignal = "momentum" | "reversal" | "breakout" | "random";
-export type ResearchExit = "next_open" | "next_close";
+export type ResearchExit =
+  | "next_open"
+  | "next_close"
+  | "hold_2d"
+  | "hold_3d";
 
 export interface ResearchFeature {
   symbol: string;
@@ -29,6 +33,8 @@ export interface ResearchFeature {
   nextOpen: number;
   nextClose: number;
   nextDate: string;
+  forwardCloses: number[];
+  forwardDates: string[];
 }
 
 export interface ResearchRules {
@@ -149,6 +155,12 @@ export function buildFeatures(
       nextOpen: next.open,
       nextClose: next.close,
       nextDate: next.date,
+      forwardCloses: sorted
+        .slice(index + 1, index + 4)
+        .map((row) => row.close),
+      forwardDates: sorted
+        .slice(index + 1, index + 4)
+        .map((row) => row.date),
     });
   }
 
@@ -276,14 +288,27 @@ export function runResearch(
       ) * 100;
       if (shares <= 0) continue;
       const buyCost = shares * entry * (1 + costs.buyFeePct / 100);
+      const holdIndex =
+        rules.exit === "hold_2d" ? 1 : rules.exit === "hold_3d" ? 2 : -1;
+      if (holdIndex >= 0 && feature.forwardCloses[holdIndex] === undefined) {
+        continue;
+      }
       const rawExit =
-        rules.exit === "next_close" ? feature.nextClose : feature.nextOpen;
+        rules.exit === "next_open"
+          ? feature.nextOpen
+          : rules.exit === "next_close"
+            ? feature.nextClose
+            : feature.forwardCloses[holdIndex];
+      const exitDate =
+        rules.exit === "next_open" || rules.exit === "next_close"
+          ? feature.nextDate
+          : feature.forwardDates[holdIndex];
       const exit = roundToTick(rawExit * (1 - costs.slippagePct / 100));
       const sellProceeds = shares * exit * (1 - costs.sellFeePct / 100);
       const pnl = sellProceeds - buyCost;
       const trade: ResearchTrade & { exitDate: string } = {
         date,
-        exitDate: feature.nextDate,
+        exitDate,
         symbol: feature.symbol,
         entry,
         exit,
@@ -351,11 +376,24 @@ export function researchMatrix(
   features: ResearchFeature[],
   dates: string[],
   regime: Map<string, boolean>,
-  options: { costs?: BsjpCosts; initialEquity?: number; allocationPct?: number } = {}
+  options: {
+    costs?: BsjpCosts;
+    initialEquity?: number;
+    allocationPct?: number;
+    signals?: ResearchSignal[];
+    exits?: ResearchExit[];
+  } = {}
 ): ResearchReport[] {
   const reports: ResearchReport[] = [];
-  for (const signal of ["momentum", "reversal", "breakout", "random"] as ResearchSignal[]) {
-    for (const exit of ["next_open", "next_close"] as ResearchExit[]) {
+  const signals = options.signals ?? [
+    "momentum",
+    "reversal",
+    "breakout",
+    "random",
+  ];
+  const exits = options.exits ?? ["next_open", "next_close"];
+  for (const signal of signals) {
+    for (const exit of exits) {
       for (const maxPositions of [1, 2]) {
         reports.push(
           runResearch(features, dates, regime, { signal, exit, maxPositions }, options)

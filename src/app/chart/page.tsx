@@ -19,6 +19,7 @@ import { LiveChart } from "@/components/LiveChart";
 import { SymbolSearch } from "@/components/SymbolSearch";
 import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
+import { chartQuery } from "@/lib/chart/url";
 import { getCompanyName } from "@/lib/sectors/companies";
 import type { HarmonicMatch } from "@/lib/quant/harmonic";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
@@ -126,9 +127,9 @@ export default function ChartPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const params = new URLSearchParams({ symbol, tf: timeframe });
-    window.history.replaceState(null, "", `/chart?${params.toString()}`);
-  }, [symbol, timeframe, hydrated]);
+    const query = chartQuery(symbol, timeframe, harmonicTf);
+    window.history.replaceState(null, "", `/chart?${query}`);
+  }, [symbol, timeframe, harmonicTf, hydrated]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {

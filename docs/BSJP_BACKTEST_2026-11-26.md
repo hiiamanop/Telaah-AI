@@ -42,6 +42,31 @@ The syariah filter reduced losses and drawdown but did not create a positive
 expectancy. This is an honest negative result, not a reason to force a
 strategy.
 
+## Parameter sweep
+
+A 96-combination sweep was run on the JII70 subset:
+
+- max positions: 1 or 2,
+- close strength: 0.70, 0.80, 0.85, 0.90,
+- volume ratio: 1.5, 2.0, 2.5,
+- return band: (1,7), (2,5), (2,6), (3,6).
+
+No combination had a positive total return after costs. The best total return
+was -1.93%, with only 10 trades and a 10% win rate. The best Sharpe was -0.73.
+Tighter filters reduced the number of trades and the loss, but did not create
+an edge. This is evidence that parameter tuning alone cannot rescue the
+current BSJP rules.
+
+The result does not prove BSJP can never work. It proves that this exact
+close-to-next-open implementation, with these filters and costs, does not.
+The next tests must change the structure, not only the thresholds:
+
+- use an actual 15:50 snapshot instead of the daily close,
+- test exits at 09:00/09:15 instead of the opening price,
+- add a different momentum or mean-reversion condition,
+- test a market breadth filter,
+- compare against a random-liquid baseline.
+
 ## What not to do
 
 - Do not run this live.

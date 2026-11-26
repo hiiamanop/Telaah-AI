@@ -56,3 +56,15 @@ Both require `ALERT_SECRET`.
   15:50/09:00 snapshots for this universe.
 - The journal does not prove profitability. It validates the backtest
   assumptions.
+
+## Weekly review
+
+```bash
+./deploy/podman/bsjp-paper-report.sh dry
+./deploy/podman/bsjp-paper-report.sh notify
+```
+
+The report shows entries, exits, win rate, total net, average net per trade,
+profit factor, average entry slippage versus the previous close, and average
+exit slippage versus the next open. A weekly cron sends it on Friday at 16:10
+WIB.

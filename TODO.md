@@ -49,7 +49,7 @@
 - [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->
 - [ ] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
 - [x] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high done=2026-11-26 created=2026-11-25 -->
-- [ ] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
+- [•] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
 - [x] Add JII70 syariah filter to BSJP scanner and backtest <!-- id=51 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Review BSJP backtest results and decide next rule experiments <!-- id=52 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Test BSJP with actual 15:50 snapshots and 09:00/09:15 exits using intraday data <!-- id=53 priority=high done=2026-11-26 created=2026-11-26 -->

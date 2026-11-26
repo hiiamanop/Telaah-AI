@@ -11,11 +11,19 @@ export interface PaperPosition {
   score: number;
   entryPrice: number;
   entryAt: string;
+  entryChangePct?: number;
+  entryCloseStrength?: number;
+  entryVolumeRatio?: number;
+  entryValue?: number;
+  entryClose?: number;
   exitPrice?: number;
+  exitOpen?: number;
   exitDate?: string;
   exitAt?: string;
   grossPct?: number;
   netPct?: number;
+  entrySlippagePct?: number;
+  exitSlippagePct?: number;
   status: "open" | "closed";
 }
 
@@ -95,6 +103,10 @@ export async function recordPaperEntries(
       score: candidate.score,
       entryPrice: candidate.last,
       entryAt: now.toISOString(),
+      entryChangePct: candidate.changePct,
+      entryCloseStrength: candidate.closeStrength,
+      entryVolumeRatio: candidate.volumeRatio,
+      entryValue: candidate.value,
       status: "open",
     });
   }
@@ -107,24 +119,39 @@ export async function recordPaperEntries(
 }
 
 export async function closePaperPositions(
-  quotes: Pick<StockbitQuote, "symbol" | "last">[],
+  quotes: Array<
+    Pick<StockbitQuote, "symbol" | "last"> &
+      Partial<Pick<StockbitQuote, "previousClose" | "open">>
+  >,
   now = new Date(),
   filePath = paperPath()
 ): Promise<{ closed: PaperPosition[]; remaining: PaperPosition[] }> {
   const store = await loadPaperPositions(filePath);
-  const prices = new Map(quotes.map((quote) => [quote.symbol, quote.last]));
+  const prices = new Map(quotes.map((quote) => [quote.symbol, quote]));
   const today = jakartaDate(now);
   const closed: PaperPosition[] = [];
 
   for (const position of store.positions) {
     if (position.status !== "open" || position.entryDate >= today) continue;
-    const exitPrice = prices.get(position.symbol);
+    const quote = prices.get(position.symbol);
+    const exitPrice = quote?.last;
     if (!exitPrice || !Number.isFinite(exitPrice) || exitPrice <= 0) continue;
 
     position.status = "closed";
     position.exitPrice = exitPrice;
     position.exitDate = today;
     position.exitAt = now.toISOString();
+    if (quote?.previousClose && quote.previousClose > 0) {
+      position.entryClose = quote.previousClose;
+      position.entrySlippagePct =
+        ((position.entryPrice - quote.previousClose) / quote.previousClose) *
+        100;
+    }
+    if (quote?.open && quote.open > 0) {
+      position.exitOpen = quote.open;
+      position.exitSlippagePct =
+        ((exitPrice - quote.open) / quote.open) * 100;
+    }
     position.grossPct =
       ((exitPrice - position.entryPrice) / position.entryPrice) * 100;
     const netBuy = position.entryPrice * (1 + DEFAULT_BSJP_COSTS.buyFeePct / 100);

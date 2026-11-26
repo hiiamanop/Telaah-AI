@@ -34,6 +34,7 @@ export interface PatternOutcome {
 export interface PatternStat {
   pattern: HarmonicPattern;
   direction: HarmonicDirection;
+  timeframe: HarmonicTimeframe;
   total: number;
   t1Hits: number;
   t2Hits: number;
@@ -46,7 +47,7 @@ export interface PatternStat {
 
 export interface HarmonicStatsResult {
   generatedAt: string;
-  timeframe: HarmonicTimeframe;
+  timeframes: HarmonicTimeframe[];
   symbols: number;
   patterns: number;
   stats: PatternStat[];
@@ -203,6 +204,7 @@ export function aggregateOutcomes(
       groups.get(key) ?? {
         pattern: pattern.pattern,
         direction: pattern.direction,
+        timeframe: pattern.timeframe,
         total: 0,
         t1Hits: 0,
         t2Hits: 0,
@@ -226,6 +228,7 @@ export function aggregateOutcomes(
       if (
         pattern.pattern === stat.pattern &&
         pattern.direction === stat.direction &&
+        pattern.timeframe === stat.timeframe &&
         outcome.daysToT1 !== null
       ) {
         t1Days.push(outcome.daysToT1);
@@ -262,13 +265,13 @@ async function mapLimit<T, R>(
 
 export async function runHarmonicStats(
   options: {
-    timeframe?: HarmonicTimeframe;
+    timeframes?: HarmonicTimeframe[];
     symbols?: string[];
     years?: number;
   } = {}
 ): Promise<HarmonicStatsResult> {
-  const timeframe = options.timeframe ?? "1D";
-  const symbols = options.symbols ?? LIQUID_IDX_UNIVERSE.slice(0, 24);
+  const timeframes = options.timeframes ?? ["4H", "1D", "1W", "1M"];
+  const symbols = options.symbols ?? LIQUID_IDX_UNIVERSE.slice(0, 40);
   const years = options.years ?? 5;
   const start = new Date(Date.now() - years * 365 * 86_400_000)
     .toISOString()
@@ -279,37 +282,55 @@ export async function runHarmonicStats(
 
   const rows = await mapLimit(symbols, 4, async (symbol) => {
     try {
-      return { symbol, candles: await yahoo.getDailyTransactions(symbol, start) };
+      const [daily, hourly] = await Promise.all([
+        yahoo.getDailyTransactions(symbol, start),
+        yahoo.getHourlyTransactions(symbol).catch(() => null),
+      ]);
+      return { symbol, daily, hourly };
     } catch {
-      return { symbol, candles: null as DailyTransaction[] | null };
+      return {
+        symbol,
+        daily: null as DailyTransaction[] | null,
+        hourly: null as DailyTransaction[] | null,
+      };
     }
   });
 
   for (const row of rows) {
-    if (!row.candles || row.candles.length < 60) {
-      limitations.push(`${row.symbol}: data historis tidak cukup.`);
+    if (!row.daily || row.daily.length < 60) {
+      limitations.push(`${row.symbol}: data harian tidak cukup.`);
       continue;
     }
-    const candles = buildTimeframeCandles(row.candles, timeframe);
-    const patterns = detectHistoricalPatterns(row.symbol, candles, timeframe);
-    for (const pattern of patterns) {
-      pairs.push({
-        pattern,
-        outcome: measurePatternOutcome(pattern, candles),
-      });
+    for (const timeframe of timeframes) {
+      const source = timeframe === "4H" ? row.hourly : row.daily;
+      if (!source || source.length < 30) {
+        if (timeframe === "4H") {
+          limitations.push(`${row.symbol}: data 4H tidak cukup.`);
+        }
+        continue;
+      }
+      const candles = buildTimeframeCandles(source, timeframe);
+      const patterns = detectHistoricalPatterns(row.symbol, candles, timeframe);
+      for (const pattern of patterns) {
+        pairs.push({
+          pattern,
+          outcome: measurePatternOutcome(pattern, candles),
+        });
+      }
     }
   }
 
   return {
     generatedAt: new Date().toISOString(),
-    timeframe,
+    timeframes,
     symbols: symbols.length,
     patterns: pairs.length,
     stats: aggregateOutcomes(pairs).sort(
       (left, right) => right.total - left.total
     ),
     limitations: [
-      `Sampel ${symbols.length} emiten likuid, ${years} tahun, timeframe ${timeframe}.`,
+      `Sampel ${symbols.length} emiten likuid, ${years} tahun, timeframe ${timeframes.join("/")}.`,
+      "4H memakai data hourly Yahoo yang lebih pendek dari 5 tahun.",
       "Pola dihitung ulang pada data historis; bukan rekomendasi.",
       ...limitations,
     ],

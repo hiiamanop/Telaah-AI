@@ -46,7 +46,7 @@
 - [ ] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium created=2026-11-24 -->
 - [x] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high done=2026-11-26 created=2026-11-24 -->
 - [x] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high done=2026-11-26 created=2026-11-24 -->
-- [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->
+- [ ] Add bandar phase alerts (harmonic PRZ alerts are now live) <!-- id=47 priority=high created=2026-11-24 -->
 - [-] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
 - [x] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high done=2026-11-26 created=2026-11-25 -->
 - [-] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
@@ -59,4 +59,7 @@
 - [x] Add harmonic XABCD and PRZ overlay to the chart page <!-- id=57 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Build a harmonic scanner page with filters and watchlist focus <!-- id=58 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Measure harmonic pattern success rate and target/invalidation outcomes <!-- id=59 priority=medium done=2026-11-26 created=2026-11-26 -->
-- [ ] Expand harmonic success stats to 4H, 1W, and 1M with a larger sample <!-- id=60 priority=medium created=2026-11-26 -->
+- [x] Expand harmonic success stats to 4H, 1W, and 1M with a larger sample <!-- id=60 priority=medium done=2026-11-26 created=2026-11-26 -->
+- [ ] Finish chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=61 priority=medium created=2026-11-26 -->
+- [ ] Expand screener to the full IDX universe and saved presets <!-- id=62 priority=medium created=2026-11-26 -->
+- [ ] Add dividend calendar to the portfolio tracker <!-- id=63 priority=medium created=2026-11-26 -->

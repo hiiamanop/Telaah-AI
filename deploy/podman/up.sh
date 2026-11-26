@@ -49,6 +49,23 @@ for _ in $(seq 1 20); do
   sleep 1
 done
 
+echo "Starting Qdrant ..."
+podman run -d \
+  --pod telaah-pod \
+  --name telaah-qdrant \
+  --restart=unless-stopped \
+  -v "$ROOT/data/qdrant_storage:/qdrant/storage:Z" \
+  docker.io/qdrant/qdrant:latest >/dev/null
+
+echo "Waiting for Qdrant ..."
+for _ in $(seq 1 30); do
+  if curl -fsS -m 2 http://127.0.0.1:6333/healthz >/dev/null 2>&1; then
+    echo "Qdrant ready."
+    break
+  fi
+  sleep 1
+done
+
 echo "Starting IDX scraper ..."
 podman run -d \
   --pod telaah-pod \
@@ -75,6 +92,7 @@ podman run -d \
   --restart=unless-stopped \
   --env-file .env \
   --env REDIS_URL=redis://127.0.0.1:6379 \
+  --env QDRANT_URL=http://127.0.0.1:6333 \
   -v "$ROOT/data:/app/data:Z" \
   telaah-ai:local
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import path from "node:path";
 import { scanHarmonicUniverse } from "@/lib/screener/harmonic-screener";
 import { RATE_LIMIT_RULES, guardRateLimit } from "@/lib/security/rate-limit";
 
@@ -14,9 +15,26 @@ export async function GET(req: NextRequest) {
   );
   if (limited) return limited;
 
-  const refresh = new URL(req.url).searchParams.get("refresh") === "1";
+  const { searchParams } = new URL(req.url);
+  const refresh = searchParams.get("refresh") === "1";
+  const rawDirection = searchParams.get("direction");
+  const direction =
+    rawDirection === "bearish" || rawDirection === "all"
+      ? rawDirection
+      : "bullish";
+  const cachePath = path.join(
+    process.cwd(),
+    "data",
+    direction === "bullish"
+      ? "harmonic_cache.json"
+      : `harmonic_cache_${direction}.json`
+  );
   try {
-    const result = await scanHarmonicUniverse({ refresh });
+    const result = await scanHarmonicUniverse({
+      refresh,
+      direction,
+      cachePath,
+    });
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     return NextResponse.json(

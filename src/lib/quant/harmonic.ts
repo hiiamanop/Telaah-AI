@@ -7,7 +7,13 @@
  */
 
 export type HarmonicTimeframe = "4H" | "1D" | "1W" | "1M";
-export type HarmonicPattern = "Gartley" | "Bat" | "Butterfly" | "Crab";
+export type HarmonicPattern =
+  | "Gartley"
+  | "Bat"
+  | "Butterfly"
+  | "Crab"
+  | "Shark"
+  | "Cypher";
 export type HarmonicDirection = "bullish" | "bearish";
 export type HarmonicStatus = "completed" | "forming";
 
@@ -126,6 +132,24 @@ const PATTERNS: PatternRule[] = [
     ad: [1.538, 1.698],
     adMid: 1.618,
     cdMid: 2.929,
+  },
+  {
+    name: "Shark",
+    ab: [0.382, 0.618],
+    bc: [1.13, 1.618],
+    cd: [1.618, 2.24],
+    ad: [0.886, 1.13],
+    adMid: 1.008,
+    cdMid: 1.929,
+  },
+  {
+    name: "Cypher",
+    ab: [0.382, 0.618],
+    bc: [1.13, 1.414],
+    cd: [1.27, 2.0],
+    ad: [0.75, 0.82],
+    adMid: 0.786,
+    cdMid: 1.635,
   },
 ];
 

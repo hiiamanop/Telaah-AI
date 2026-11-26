@@ -47,11 +47,15 @@
 - [x] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high done=2026-11-26 created=2026-11-24 -->
 - [x] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high done=2026-11-26 created=2026-11-24 -->
 - [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->
-- [ ] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
+- [-] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
 - [x] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high done=2026-11-26 created=2026-11-25 -->
-- [•] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
+- [-] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
 - [x] Add JII70 syariah filter to BSJP scanner and backtest <!-- id=51 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Review BSJP backtest results and decide next rule experiments <!-- id=52 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Test BSJP with actual 15:50 snapshots and 09:00/09:15 exits using intraday data <!-- id=53 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Rework BSJP signal to escape next-open mean reversion and compare with random-liquid baseline <!-- id=54 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Test reversal signal with 2-3 day holds and lower-cost execution model <!-- id=55 priority=high done=2026-11-26 created=2026-11-26 -->
+- [ ] Audit harmonic detector quality (patterns, ratios, timeframes, false positives) <!-- id=56 priority=high created=2026-11-26 -->
+- [ ] Add harmonic XABCD and PRZ overlay to the chart page <!-- id=57 priority=high created=2026-11-26 -->
+- [ ] Build a harmonic scanner page with filters and watchlist focus <!-- id=58 priority=medium created=2026-11-26 -->
+- [ ] Measure harmonic pattern success rate and target/invalidation outcomes <!-- id=59 priority=medium created=2026-11-26 -->

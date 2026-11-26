@@ -43,6 +43,7 @@ export interface HarmonicCandidate {
 export interface HarmonicScanResult {
   generatedAt: string;
   date: string;
+  direction?: "bullish" | "bearish" | "all";
   universeSize: number;
   scanned: number;
   failed: number;
@@ -53,6 +54,7 @@ export interface HarmonicScanResult {
 export interface HarmonicScanOptions {
   refresh?: boolean;
   symbols?: string[];
+  direction?: "bullish" | "bearish" | "all";
   source?: HarmonicDataSource;
   detect?: typeof detectHarmonicPatterns;
   cachePath?: string;
@@ -116,7 +118,8 @@ async function scanSymbol(
   symbol: string,
   source: HarmonicDataSource,
   detect: typeof detectHarmonicPatterns,
-  now: Date
+  now: Date,
+  direction: "bullish" | "bearish" | "all" = "bullish"
 ): Promise<SymbolScan> {
   let daily: DailyTransaction[] | null = null;
   let hourly: DailyTransaction[] | null = null;
@@ -165,7 +168,11 @@ async function scanSymbol(
       timeframe: frame.timeframe,
       rsi,
     });
-    matches.push(...found.filter((match) => match.direction === "bullish"));
+    matches.push(
+      ...found.filter(
+        (match) => direction === "all" || match.direction === direction
+      )
+    );
   }
 
   if (matches.length === 0) return { candidate: null, failed: false };
@@ -234,9 +241,10 @@ export async function scanHarmonicUniverse(
   const now = options.now?.() ?? new Date();
   const cachePath = options.cachePath ?? CACHE_FILE_PATH;
 
+  const direction = options.direction ?? "bullish";
   if (!options.refresh && !options.symbols?.length) {
     const cached = readHarmonicCache(CACHE_MAX_AGE_HOURS, cachePath, now);
-    if (cached) return cached;
+    if (cached && (cached.direction ?? "bullish") === direction) return cached;
   }
 
   const universe = (options.symbols?.length
@@ -249,7 +257,7 @@ export async function scanHarmonicUniverse(
   const scans = await mapWithConcurrency(
     universe,
     options.concurrency ?? DEFAULT_CONCURRENCY,
-    (symbol) => scanSymbol(symbol, source, detect, now)
+    (symbol) => scanSymbol(symbol, source, detect, now, direction)
   );
 
   const candidates = scans
@@ -284,6 +292,7 @@ export async function scanHarmonicUniverse(
   const result: HarmonicScanResult = {
     generatedAt: now.toISOString(),
     date: jakartaDate(now),
+    direction,
     universeSize: universe.length,
     scanned,
     failed,

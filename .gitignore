@@ -41,6 +41,7 @@ data/qdrant_storage/
 
 # runtime caches and local bot state
 data/harmonic_cache.json
+data/harmonic_cache_*.json
 data/telegram_state.json
 data/brief.log
 data/alerts.log
@@ -49,6 +50,8 @@ data/bsjp.log
 data/backtests/
 data/bsjp_paper.json
 data/bsjp-paper.log
+data/harmonic-alerts.log
+data/harmonic_alerts_cache.json
 data/alert_watchlist.json
 
 # python scraper

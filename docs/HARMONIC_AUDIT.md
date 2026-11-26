@@ -10,11 +10,11 @@ deterministic and does not call an LLM.
 ## What the detector does
 
 - Finds confirmed percentage ZigZag pivots.
-- Validates XABCD windows against Gartley, Bat, Butterfly, and Crab ratios.
+- Validates XABCD windows against Gartley, Bat, Butterfly, Crab, Shark, and Cypher ratios.
 - Computes a PRZ from the AD and CD Fibonacci zones.
 - Returns invalidation, T1 (C), T2 (A), risk/reward, RSI context, and score.
 - Supports bullish and bearish directions, completed and forming patterns.
-- The screener scans 4H, 1D, 1W, and 1M, but only keeps bullish matches.
+- The screener scans 4H, 1D, 1W, and 1M. It defaults to bullish and now supports bearish and all-direction scans.
 
 ## Findings
 
@@ -28,8 +28,8 @@ deterministic and does not call an LLM.
    date, keeping the best fit.
 4. `forming` patterns project D with a fixed 0.886 retracement. They are
    informational and should not be treated as completed setups.
-5. The screener only shows bullish setups. Bearish matches exist in the
-   detector but are intentionally hidden from the current buy-focused brief.
+5. The buy-focused brief still uses bullish matches by default. The scanner
+   page can switch to bearish or all-direction mode.
 6. Yahoo data is delayed and can differ from the broker chart. The UI and
    Telegram brief disclose this.
 7. The detector has no volume confirmation. Volume and flow are separate
@@ -43,6 +43,21 @@ deterministic and does not call an LLM.
   pattern ratio rejection.
 - Added historical outcome tests for T1, T2, invalidation, and hit-rate
   aggregation.
+
+## Validation snapshot
+
+The stats endpoint now scans 40 liquid names across 4H, 1D, 1W, and 1M:
+
+```text
+223 historical patterns
+Gartley 1W bullish: 41 samples, T1 65.9%, T2 41.5%
+Shark 1D bullish: 32 samples, T1 12.5%, invalidated 71.9%
+Butterfly 1D bearish: 29 samples, T1 62.1%, T2 55.2%
+Cypher 1D bullish: 10 samples, T1 40.0%
+```
+
+These are historical observations, not a promise. The sample is still small for
+some groups, and the outcome horizon is 60 bars without fees.
 
 ## Limitations
 

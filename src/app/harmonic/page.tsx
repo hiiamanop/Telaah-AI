@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Filter,
@@ -30,6 +30,8 @@ const PATTERNS: Array<"all" | HarmonicPattern> = [
   "Bat",
   "Butterfly",
   "Crab",
+  "Shark",
+  "Cypher",
 ];
 const TIMEFRAMES: Array<"all" | HarmonicTimeframe> = [
   "all",
@@ -57,19 +59,25 @@ export default function HarmonicPage() {
   const [error, setError] = useState<string | null>(null);
   const [pattern, setPattern] = useState<"all" | HarmonicPattern>("all");
   const [timeframe, setTimeframe] = useState<"all" | HarmonicTimeframe>("all");
+  const [direction, setDirection] = useState<"bullish" | "bearish" | "all">(
+    "bullish"
+  );
   const [watchlistOnly, setWatchlistOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [stats, setStats] = useState<HarmonicStatsResult | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  const load = async (refresh = false) => {
+  const load = useCallback(async (
+    refresh = false,
+    dir: "bullish" | "bearish" | "all" = direction
+  ) => {
     if (refresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
     try {
       const response = await fetch(
-        `/api/harmonic/scan${refresh ? "?refresh=1" : ""}`,
+        `/api/harmonic/scan?direction=${dir}${refresh ? "&refresh=1" : ""}`,
         { cache: "no-store" }
       );
       const data = await response.json();
@@ -83,11 +91,17 @@ export default function HarmonicPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [direction]);
 
   useEffect(() => {
     setWatchlist(getWatchlistSymbols());
-    void load();
+  }, []);
+
+  useEffect(() => {
+    void load(false, direction);
+  }, [direction, load]);
+
+  useEffect(() => {
     fetch("/api/harmonic/stats", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
@@ -197,6 +211,23 @@ export default function HarmonicPage() {
               </option>
             ))}
           </select>
+          <div className="flex items-center gap-1 rounded-md border border-slate-200 p-0.5 dark:border-white/10">
+            {(["bullish", "bearish", "all"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setDirection(item)}
+                className={`rounded px-2 py-1 font-mono text-[10px] transition ${
+                  direction === item
+                    ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                    : "text-slate-500 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+                aria-pressed={direction === item}
+              >
+                {item === "bullish" ? "Bull" : item === "bearish" ? "Bear" : "All"}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => setWatchlistOnly((value) => !value)}
@@ -225,7 +256,7 @@ export default function HarmonicPage() {
               </h2>
               <p className="mt-0.5 text-[10px] text-slate-400">
                 {stats
-                  ? `${stats.patterns} pola · ${stats.symbols} emiten · ${stats.timeframe} · 5 tahun`
+                  ? `${stats.patterns} pola · ${stats.symbols} emiten · ${stats.timeframes.join("/")} · 5 tahun`
                   : "Sampel 1D dari 24 emiten likuid"}
               </p>
             </div>
@@ -255,7 +286,7 @@ export default function HarmonicPage() {
                       <td className="px-4 py-2 font-mono text-zinc-800 dark:text-zinc-200">
                         {row.pattern}
                         <span className="ml-1 text-[9px] text-slate-400">
-                          {row.direction}
+                          {row.timeframe} · {row.direction}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-slate-500 dark:text-slate-400">
@@ -334,7 +365,7 @@ function HarmonicRow({ candidate }: { candidate: HarmonicCandidate }) {
   const name = getCompanyName(candidate.symbol) ?? candidate.symbol;
   const href = `/chart?symbol=${encodeURIComponent(candidate.symbol)}&tf=${chartTimeframe(
     best.timeframe
-  )}`;
+  )}&htf=${best.timeframe}`;
 
   return (
     <LinkRow

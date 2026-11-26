@@ -21,6 +21,7 @@ import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
 import { getCompanyName } from "@/lib/sectors/companies";
 import type { HarmonicMatch } from "@/lib/quant/harmonic";
+import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { getWatchlistSymbols } from "@/lib/storage/history";
 
 const TIMEFRAMES: Array<{ key: ChartTimeframe; label: string }> = [
@@ -87,6 +88,7 @@ export default function ChartPage() {
   const [quickSymbols, setQuickSymbols] = useState<string[]>(POPULAR);
   const [harmonicEnabled, setHarmonicEnabled] = useState(true);
   const [harmonicMatches, setHarmonicMatches] = useState<HarmonicMatch[]>([]);
+  const [harmonicTf, setHarmonicTf] = useState<string | null>(null);
   const [harmonicLoading, setHarmonicLoading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +99,15 @@ export default function ChartPage() {
       .toUpperCase()
       .replace(".JK", "");
     if (/^[A-Z]{4}$/.test(requested)) setSymbol(requested);
+    const requestedHtf = params.get("htf");
+    if (
+      requestedHtf === "4H" ||
+      requestedHtf === "1D" ||
+      requestedHtf === "1W" ||
+      requestedHtf === "1M"
+    ) {
+      setHarmonicTf(requestedHtf);
+    }
     const requestedTf = params.get("tf");
     if (
       requestedTf === "1D" ||
@@ -139,7 +150,8 @@ export default function ChartPage() {
     }
     const controller = new AbortController();
     setHarmonicLoading(true);
-    fetch(`/api/harmonic?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`, {
+    const htfQuery = harmonicTf ? `&htf=${harmonicTf}` : "";
+    fetch(`/api/harmonic?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}${htfQuery}`, {
       signal: controller.signal,
       cache: "no-store",
     })
@@ -158,7 +170,7 @@ export default function ChartPage() {
         if (!controller.signal.aborted) setHarmonicLoading(false);
       });
     return () => controller.abort();
-  }, [symbol, timeframe, hydrated, harmonicEnabled]);
+  }, [symbol, timeframe, hydrated, harmonicEnabled, harmonicTf]);
 
   const { frame, status, error, reconnect } = useChartStream(
     symbol,
@@ -171,6 +183,21 @@ export default function ChartPage() {
   const companyName = getCompanyName(symbol) ?? `PT ${symbol} Tbk`;
   const harmonic = harmonicEnabled ? harmonicMatches[0] ?? null : null;
   const candle = current?.last;
+  const technical = useMemo(() => {
+    if (!current || current.candles.length < 5) return null;
+    return computeTechnicalIndicators(
+      current.candles.map((candle) => ({
+        symbol: current.symbol,
+        date: candle.date ?? new Date(candle.time * 1000).toISOString().slice(0, 10),
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+        volume: candle.volume,
+      }))
+    );
+  }, [current]);
+
   const session = useMemo(() => {
     const bars = current?.candles ?? [];
     if (bars.length === 0) return null;
@@ -495,6 +522,44 @@ export default function ChartPage() {
                   <RefreshCw className="h-3 w-3" />
                   Sambung ulang
                 </button>
+              )}
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-white/10 dark:bg-[#0b0b0c]">
+              <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Teknikal
+              </h2>
+              {technical ? (
+                <div className="space-y-2 text-[11px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500 dark:text-slate-400">SMA20 / SMA50</span>
+                    <span className="font-mono text-zinc-800 dark:text-zinc-200">
+                      {formatPrice(technical.sma20 ?? undefined)} / {formatPrice(technical.sma50 ?? undefined)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500 dark:text-slate-400">RSI14</span>
+                    <span className="font-mono text-zinc-800 dark:text-zinc-200">
+                      {technical.rsi14 === null ? "—" : technical.rsi14.toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500 dark:text-slate-400">MACD hist</span>
+                    <span className={`font-mono ${(technical.macd.histogram ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {technical.macd.histogram === null ? "—" : technical.macd.histogram.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500 dark:text-slate-400">Tren</span>
+                    <span className="font-mono text-zinc-800 dark:text-zinc-200">
+                      {technical.trendAssessment}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Data teknikal belum cukup.
+                </p>
               )}
             </section>
 

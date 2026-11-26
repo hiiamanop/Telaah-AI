@@ -24,9 +24,14 @@ export function harmonicTimeframeFor(
 
 export async function analyzeSymbolHarmonics(
   symbol: string,
-  timeframe: ChartHarmonicTimeframe
+  timeframe: ChartHarmonicTimeframe,
+  requestedTimeframe?: HarmonicTimeframe
 ): Promise<HarmonicOverlayResult> {
-  const harmonicTimeframe = harmonicTimeframeFor(timeframe);
+  const allowed: HarmonicTimeframe[] = ["4H", "1D", "1W", "1M"];
+  const harmonicTimeframe =
+    requestedTimeframe && allowed.includes(requestedTimeframe)
+      ? requestedTimeframe
+      : harmonicTimeframeFor(timeframe);
   const startDate = new Date(Date.now() - 5 * 365 * 86_400_000)
     .toISOString()
     .slice(0, 10);

@@ -82,6 +82,20 @@ describe("evaluateHarmonicPoints", () => {
     expect(result).toBeNull();
   });
 
+  it("recognises Shark and Cypher geometry", () => {
+    const shark = evaluateHarmonicPoints(
+      { x: 100, a: 200, b: 150, c: 215, d: 95 },
+      "bullish"
+    );
+    expect(shark?.pattern).toBe("Shark");
+
+    const cypher = evaluateHarmonicPoints(
+      { x: 100, a: 200, b: 150, c: 215, d: 121.4 },
+      "bullish"
+    );
+    expect(cypher?.pattern).toBe("Cypher");
+  });
+
   it("rejects a window whose D is outside the PRZ", () => {
     const result = evaluateHarmonicPoints(
       { x: 100, a: 200, b: 138.2, c: 183.2, d: 160 },

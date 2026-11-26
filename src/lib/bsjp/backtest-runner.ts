@@ -8,6 +8,7 @@ import {
   runBsjpBacktest,
   type BsjpBacktestReport,
 } from "@/lib/bsjp/backtest";
+import { DEFAULT_BSJP_RULES } from "@/lib/bsjp/evaluate";
 
 interface CachedSeries {
   fetchedAt: string;
@@ -30,6 +31,55 @@ export interface BacktestRunResult {
   fetched: number;
   cached: number;
   failed: string[];
+}
+
+export interface LoadedBacktestData {
+  data: Record<string, DailyTransaction[]>;
+  index: DailyTransaction[];
+  startDate: string;
+  endDate: string;
+  universe: string[];
+  syariahOnly: boolean;
+  fetched: number;
+  cached: number;
+  failed: string[];
+  limitations: string[];
+}
+
+export interface BsjpSweepCombo {
+  minCloseStrength: number;
+  minVolumeRatio: number;
+  minReturnPct: number;
+  maxReturnPct: number;
+  maxPositions: number;
+}
+
+export interface BsjpSweepRow extends BsjpSweepCombo {
+  totalReturnPct: number;
+  cagrPct: number;
+  maxDrawdownPct: number;
+  sharpe: number;
+  tradeCount: number;
+  winRatePct: number;
+  avgNetPct: number;
+  profitFactor: number;
+  exposurePct: number;
+  worstGapPct: number;
+  finalEquity: number;
+}
+
+export interface BsjpSweepResult {
+  comboCount: number;
+  universeSize: number;
+  syariahOnly: boolean;
+  rows: BsjpSweepRow[];
+  topReturn: BsjpSweepRow[];
+  topSharpe: BsjpSweepRow[];
+  reportPath: string | null;
+  fetched: number;
+  cached: number;
+  failed: string[];
+  limitations: string[];
 }
 
 const CACHE_TTL_MS = 12 * 3600_000;
@@ -105,9 +155,9 @@ async function loadSeries(
   }
 }
 
-export async function runBsjpBacktestFromYahoo(
+export async function loadBsjpBacktestData(
   options: BacktestRunOptions = {}
-): Promise<BacktestRunResult> {
+): Promise<LoadedBacktestData> {
   const now = options.now ?? new Date();
   const years = Math.min(10, Math.max(1, options.years ?? 5));
   const startDate = startDateFor(now, years);
@@ -161,12 +211,33 @@ export async function runBsjpBacktestFromYahoo(
     limitations.push(`Sampel hanya ${years} tahun.`);
   }
 
-  const report = runBsjpBacktest({
+  return {
     data,
     index,
-    start: startDate,
-    end: now.toISOString().slice(0, 10),
+    startDate,
+    endDate: now.toISOString().slice(0, 10),
+    universe,
+    syariahOnly,
+    fetched,
+    cached,
+    failed,
     limitations,
+  };
+}
+
+export async function runBsjpBacktestFromYahoo(
+  options: BacktestRunOptions = {}
+): Promise<BacktestRunResult> {
+  const now = options.now ?? new Date();
+  const years = Math.min(10, Math.max(1, options.years ?? 5));
+  const loaded = await loadBsjpBacktestData(options);
+
+  const report = runBsjpBacktest({
+    data: loaded.data,
+    index: loaded.index,
+    start: loaded.startDate,
+    end: loaded.endDate,
+    limitations: loaded.limitations,
   });
 
   let reportPath: string | null = null;
@@ -183,9 +254,9 @@ export async function runBsjpBacktestFromYahoo(
         {
           generatedAt: now.toISOString(),
           years,
-          universeSize: universe.length,
-          syariahOnly,
-          failed,
+          universeSize: loaded.universe.length,
+          syariahOnly: loaded.syariahOnly,
+          failed: loaded.failed,
           report,
         },
         null,
@@ -194,10 +265,136 @@ export async function runBsjpBacktestFromYahoo(
       "utf8"
     );
   } catch {
-    limitations.push("Laporan gagal disimpan ke disk.");
+    loaded.limitations.push("Laporan gagal disimpan ke disk.");
   }
 
-  return { report, reportPath, fetched, cached, failed };
+  return {
+    report,
+    reportPath,
+    fetched: loaded.fetched,
+    cached: loaded.cached,
+    failed: loaded.failed,
+  };
+}
+
+function sweepCombos(): BsjpSweepCombo[] {
+  const combos: BsjpSweepCombo[] = [];
+  for (const maxPositions of [1, 2]) {
+    for (const minCloseStrength of [0.7, 0.8, 0.85, 0.9]) {
+      for (const minVolumeRatio of [1.5, 2, 2.5]) {
+        for (const [minReturnPct, maxReturnPct] of [
+          [1, 7],
+          [2, 5],
+          [2, 6],
+          [3, 6],
+        ]) {
+          combos.push({
+            maxPositions,
+            minCloseStrength,
+            minVolumeRatio,
+            minReturnPct,
+            maxReturnPct,
+          });
+        }
+      }
+    }
+  }
+  return combos;
+}
+
+export async function runBsjpSweepFromYahoo(
+  options: BacktestRunOptions = {}
+): Promise<BsjpSweepResult> {
+  const now = options.now ?? new Date();
+  const loaded = await loadBsjpBacktestData(options);
+  const rows: BsjpSweepRow[] = [];
+  const combos = sweepCombos();
+
+  for (const combo of combos) {
+    const report = runBsjpBacktest({
+      data: loaded.data,
+      index: loaded.index,
+      start: loaded.startDate,
+      end: loaded.endDate,
+      maxPositions: combo.maxPositions,
+      rules: {
+        ...DEFAULT_BSJP_RULES,
+        minCloseStrength: combo.minCloseStrength,
+        minVolumeRatio: combo.minVolumeRatio,
+        minReturnPct: combo.minReturnPct,
+        maxReturnPct: combo.maxReturnPct,
+      },
+      limitations: loaded.limitations,
+    });
+    rows.push({
+      ...combo,
+      totalReturnPct: report.totalReturnPct,
+      cagrPct: report.cagrPct,
+      maxDrawdownPct: report.maxDrawdownPct,
+      sharpe: report.sharpe,
+      tradeCount: report.tradeCount,
+      winRatePct: report.winRatePct,
+      avgNetPct: report.avgNetPct,
+      profitFactor: report.profitFactor,
+      exposurePct: report.exposurePct,
+      worstGapPct: report.worstGapPct,
+      finalEquity: report.finalEquity,
+    });
+  }
+
+  const topReturn = [...rows]
+    .filter((row) => row.tradeCount >= 20)
+    .sort((left, right) => right.totalReturnPct - left.totalReturnPct)
+    .slice(0, 10);
+  const topSharpe = [...rows]
+    .filter((row) => row.tradeCount >= 20)
+    .sort((left, right) => right.sharpe - left.sharpe)
+    .slice(0, 10);
+
+  let reportPath: string | null = null;
+  try {
+    const reportDir = path.join(process.cwd(), "data", "backtests");
+    await mkdir(reportDir, { recursive: true });
+    reportPath = path.join(
+      reportDir,
+      `bsjp-sweep-${now.toISOString().replace(/[:.]/g, "-")}.json`
+    );
+    await writeFile(
+      reportPath,
+      JSON.stringify(
+        {
+          generatedAt: now.toISOString(),
+          years: options.years ?? 5,
+          universeSize: loaded.universe.length,
+          syariahOnly: loaded.syariahOnly,
+          comboCount: combos.length,
+          topReturn,
+          topSharpe,
+          rows,
+          failed: loaded.failed,
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+  } catch {
+    loaded.limitations.push("Laporan sweep gagal disimpan ke disk.");
+  }
+
+  return {
+    comboCount: combos.length,
+    universeSize: loaded.universe.length,
+    syariahOnly: loaded.syariahOnly,
+    rows,
+    topReturn,
+    topSharpe,
+    reportPath,
+    fetched: loaded.fetched,
+    cached: loaded.cached,
+    failed: loaded.failed,
+    limitations: loaded.limitations,
+  };
 }
 
 export function summarizeBacktest(report: BsjpBacktestReport) {

@@ -33,6 +33,29 @@ export interface ChartCandle {
   volume: number;
 }
 
+export interface StockbitQuote {
+  symbol: string;
+  last: number;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  previousClose: number;
+  change: number | null;
+  changePct: number;
+  volume: number;
+  value: number;
+  frequency: number | null;
+  foreignBuy: number | null;
+  foreignSell: number | null;
+  foreignNet: number | null;
+  foreignCurrent: boolean;
+  bid: number | null;
+  offer: number | null;
+  ara: number | null;
+  arb: number | null;
+  source: string;
+}
+
 export interface ScraperChart {
   candles: ChartCandle[];
   previousClose?: number | null;
@@ -112,6 +135,54 @@ export class ScraperClient {
       `/v1/idx/foreign-flow/${encodeURIComponent(symbol)}`,
       { symbol, length }
     );
+  }
+
+  async getQuote(symbol: string): Promise<StockbitQuote | null> {
+    const result = await this.get<{
+      symbol?: string;
+      last?: number;
+      open?: number | null;
+      high?: number | null;
+      low?: number | null;
+      previous_close?: number;
+      change?: number | null;
+      change_pct?: number;
+      volume?: number;
+      value?: number;
+      frequency?: number | null;
+      foreign_buy?: number | null;
+      foreign_sell?: number | null;
+      foreign_net?: number | null;
+      foreign_current?: boolean;
+      bid?: number | null;
+      offer?: number | null;
+      ara?: number | null;
+      arb?: number | null;
+      source?: string;
+    }>(`/v1/stockbit/quote/${encodeURIComponent(symbol)}`);
+    if (!result?.last) return null;
+    return {
+      symbol: result.symbol ?? symbol,
+      last: result.last,
+      open: result.open ?? null,
+      high: result.high ?? null,
+      low: result.low ?? null,
+      previousClose: result.previous_close ?? 0,
+      change: result.change ?? null,
+      changePct: result.change_pct ?? 0,
+      volume: result.volume ?? 0,
+      value: result.value ?? 0,
+      frequency: result.frequency ?? null,
+      foreignBuy: result.foreign_buy ?? null,
+      foreignSell: result.foreign_sell ?? null,
+      foreignNet: result.foreign_net ?? null,
+      foreignCurrent: Boolean(result.foreign_current),
+      bid: result.bid ?? null,
+      offer: result.offer ?? null,
+      ara: result.ara ?? null,
+      arb: result.arb ?? null,
+      source: result.source ?? "stockbit",
+    };
   }
 
   async getChart(

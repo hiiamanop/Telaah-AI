@@ -7,6 +7,7 @@ from scraper.stockbit import (
     get_chart,
     parse_broker_summary,
     parse_credential_storage,
+    parse_quote,
 )
 
 ACCESS = "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjQwMDAwMDAwMDAsInR5cGUiOiJhY2Nlc3MifQ.signature"
@@ -165,6 +166,45 @@ class ChartTests(unittest.TestCase):
         self.assertEqual(result["candles"], [])
         self.assertIsNone(result["last"])
         self.assertTrue(result["limitations"])
+
+
+class QuoteTests(unittest.TestCase):
+    def test_maps_orderbook_quote(self):
+        payload = {
+            "data": {
+                "symbol": "BBCA",
+                "lastprice": "5825",
+                "open": "5825",
+                "high": "5850",
+                "low": "5750",
+                "close": "5800",
+                "change": 25,
+                "volume": "164649600",
+                "value": "955107295000",
+                "frequency": "1000",
+                "fbuy": "800159955000",
+                "fsell": "477131635000",
+                "fnet": "323028320000",
+                "has_foreign_bs": True,
+                "bid": [{"price": "5800", "volume": "3637200"}],
+                "offer": [{"price": "5825", "volume": "13477800"}],
+                "ara": {"value": "6,975", "visible": True},
+                "arb": {"value": "5,425", "visible": True},
+            }
+        }
+        quote = parse_quote(payload, "BBCA")
+        self.assertEqual(quote["symbol"], "BBCA")
+        self.assertEqual(quote["last"], 5825)
+        self.assertEqual(quote["previous_close"], 5800)
+        self.assertEqual(quote["change_pct"], 0.43)
+        self.assertEqual(quote["volume"], 164649600)
+        self.assertEqual(quote["value"], 955107295000)
+        self.assertEqual(quote["foreign_net"], 323028320000)
+        self.assertTrue(quote["foreign_current"])
+        self.assertEqual(quote["bid"], 5800)
+        self.assertEqual(quote["offer"], 5825)
+        self.assertEqual(quote["ara"], 6975)
+        self.assertEqual(quote["arb"], 5425)
 
 
 if __name__ == "__main__":

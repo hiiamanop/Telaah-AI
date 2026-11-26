@@ -45,6 +45,7 @@ data/telegram_state.json
 data/brief.log
 data/alerts.log
 data/stockbit-session.log
+data/bsjp.log
 data/alert_watchlist.json
 
 # python scraper

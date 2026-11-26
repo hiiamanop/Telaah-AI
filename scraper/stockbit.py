@@ -336,7 +336,7 @@ def _number(value: Any) -> float | None:
         return float(value)
     if isinstance(value, str):
         try:
-            return float(value)
+            return float(value.replace(",", ""))
         except ValueError:
             return None
     return None
@@ -483,6 +483,7 @@ def clear_session() -> None:
 
 
 CHART_CACHE = TTLCache()
+QUOTE_CACHE = TTLCache()
 CHART_TIMEFRAMES = {"1D": "1w", "1W": "1w", "1Y": "1y", "5Y": "5y"}
 
 
@@ -500,6 +501,69 @@ def _chart_time(row: dict[str, Any]) -> int | None:
         except ValueError:
             continue
     return None
+
+
+def parse_quote(payload: dict[str, Any], symbol: str) -> dict[str, Any]:
+    data = payload.get("data") or {}
+    last = _number(data.get("lastprice")) or _number(data.get("last")) or 0.0
+    change = _number(data.get("change"))
+    reported_close = _number(data.get("close"))
+    previous = (
+        last - change
+        if change is not None
+        else (reported_close if reported_close is not None else 0.0)
+    )
+    change_pct = (
+        round(((last - previous) / previous) * 100, 2) if previous > 0 else 0.0
+    )
+
+    def top_price(rows: Any) -> float | None:
+        if isinstance(rows, list) and rows:
+            return _number((rows[0] or {}).get("price"))
+        return None
+
+    def threshold(value: Any) -> float | None:
+        if isinstance(value, dict):
+            return _number(value.get("value"))
+        return _number(value)
+
+    return {
+        "symbol": str(data.get("symbol") or symbol).upper(),
+        "last": last,
+        "open": _number(data.get("open")),
+        "high": _number(data.get("high")),
+        "low": _number(data.get("low")),
+        "previous_close": previous,
+        "change": change,
+        "change_pct": change_pct,
+        "volume": _number(data.get("volume")),
+        "value": _number(data.get("value")),
+        "frequency": _number(data.get("frequency")),
+        "foreign_buy": _number(data.get("fbuy")),
+        "foreign_sell": _number(data.get("fsell")),
+        "foreign_net": _number(data.get("fnet")),
+        "foreign_current": bool(data.get("has_foreign_bs")),
+        "bid": top_price(data.get("bid")),
+        "offer": top_price(data.get("offer")),
+        "ara": threshold(data.get("ara")),
+        "arb": threshold(data.get("arb")),
+        "source": "stockbit",
+    }
+
+
+def get_quote(symbol: str) -> dict[str, Any]:
+    clean = symbol.upper().strip()
+    cache_key = f"quote:{clean}"
+    cached = QUOTE_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    payload = _request_json(
+        f"/company-price-feed/v2/orderbook/companies/{clean}"
+    )
+    result = parse_quote(payload, clean)
+    QUOTE_CACHE.set(cache_key, result, 3)
+    return result
 
 
 def get_chart(symbol: str, timeframe: str = "1Y") -> dict[str, Any]:

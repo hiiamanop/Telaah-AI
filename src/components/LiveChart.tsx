@@ -18,6 +18,7 @@ import {
 } from "lightweight-charts";
 import type { ChartCandle } from "@/lib/market/scraper-client";
 import type { HarmonicMatch } from "@/lib/quant/harmonic";
+import { PrzBandPrimitive } from "@/components/chart/prz-band";
 
 interface LiveChartProps {
   candles: ChartCandle[];
@@ -103,6 +104,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   const candlesRef = useRef<ChartCandle[]>(candles);
   const harmonicSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const harmonicLinesRef = useRef<IPriceLine[]>([]);
+  const harmonicBandRef = useRef<PrzBandPrimitive | null>(null);
   const [hovered, setHovered] = useState<ChartCandle | null>(null);
   const [isDark, setIsDark] = useState(true);
 
@@ -229,6 +231,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       volumeRef.current = null;
       harmonicSeriesRef.current = null;
       harmonicLinesRef.current = [];
+      harmonicBandRef.current = null;
     };
   }, [height, intraday]);
 
@@ -254,6 +257,15 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       }
     }
     harmonicLinesRef.current = [];
+
+    if (harmonicBandRef.current) {
+      try {
+        candleSeries.detachPrimitive(harmonicBandRef.current);
+      } catch {
+        // Chart was already recreated.
+      }
+      harmonicBandRef.current = null;
+    }
 
     if (!harmonic?.pivotPrices) return;
 
@@ -330,11 +342,18 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         })
       );
     };
-    addLine(harmonic.prz.high, bullish ? "#10b981" : "#f43f5e", "PRZ");
-    addLine(harmonic.prz.low, bullish ? "#10b981" : "#f43f5e", "PRZ");
     addLine(harmonic.invalidation, "#ef4444", "Invalidasi");
     addLine(harmonic.targets.t1, "#60a5fa", "T1", LineStyle.Dotted);
     addLine(harmonic.targets.t2, "#60a5fa", "T2", LineStyle.Dotted);
+
+    const band = new PrzBandPrimitive(
+      harmonic.prz.low,
+      harmonic.prz.high,
+      bullish ? "rgba(16, 185, 129, 0.16)" : "rgba(244, 63, 94, 0.16)"
+    );
+    candleSeries.attachPrimitive(band);
+    harmonicBandRef.current = band;
+
     harmonicLinesRef.current = lines;
 
     return () => {
@@ -344,6 +363,14 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         } catch {
           // Chart was already recreated.
         }
+      }
+      if (harmonicBandRef.current) {
+        try {
+          candleSeries.detachPrimitive(harmonicBandRef.current);
+        } catch {
+          // Chart was already recreated.
+        }
+        harmonicBandRef.current = null;
       }
       if (harmonicSeriesRef.current) {
         try {

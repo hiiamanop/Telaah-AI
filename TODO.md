@@ -48,4 +48,5 @@
 - [ ] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high created=2026-11-24 -->
 - [ ] Add bandar phase and harmonic PRZ signals to the alert engine <!-- id=47 priority=high created=2026-11-24 -->
 - [ ] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
-- [ ] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high created=2026-11-25 -->
+- [x] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high done=2026-11-26 created=2026-11-25 -->
+- [ ] Run BSJP paper journal during live market sessions and review candidate quality <!-- id=50 priority=high created=2026-11-26 -->

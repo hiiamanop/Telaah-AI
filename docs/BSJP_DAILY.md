@@ -120,7 +120,35 @@ even. The scanner must rank net expectancy, not raw momentum.
 4. Paper results consistent with the backtest.
 5. Broker API access, manual confirmation, kill switch, and audit logging.
 
-## 11. Open decisions
+## 11. Scheduler
+
+The pre-close scan runs at 15:45 WIB on weekdays:
+
+```cron
+45 15 * * 1-5 cd /home/ahmad/workspace/Telaah-AI && ./deploy/podman/bsjp-scan.sh >> data/bsjp.log 2>&1
+```
+
+It uses the existing Stockbit session for real-time quotes through
+`/v1/stockbit/quote/{symbol}` and Yahoo daily candles for EMA, RSI, and volume
+context. It never submits an order.
+
+Preview without sending Telegram:
+
+```bash
+./deploy/podman/bsjp-scan.sh dry
+```
+
+To inspect candidates even when IHSG is below EMA20, use a dry research scan:
+
+```bash
+./deploy/podman/bsjp-scan.sh force
+```
+
+The force flag only works with `dry=1` and never sends Telegram.
+
+The endpoint is `POST /api/bsjp/scan` and requires `ALERT_SECRET`.
+
+## 12. Open decisions
 
 - Universe: watchlist only, liquid IDX, or a fixed index such as IDX80?
 - Exit window: exactly at open, 09:15, or 09:30?

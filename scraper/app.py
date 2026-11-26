@@ -134,6 +134,11 @@ def stockbit_status() -> dict[str, Any]:
     return asdict(stockbit.status())
 
 
+@app.get("/v1/stockbit/quote/{symbol}")
+def stockbit_quote(symbol: str) -> dict[str, Any]:
+    return stockbit.get_quote(symbol)
+
+
 @app.get("/v1/stockbit/chart/{symbol}")
 def stockbit_chart(
     symbol: str,

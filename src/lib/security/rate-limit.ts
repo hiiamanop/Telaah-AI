@@ -23,6 +23,7 @@ export const RATE_LIMIT_RULES = {
   translate: { limit: 120, windowMs: 60_000 },
   alerts: { limit: 60, windowMs: 60_000 },
   alertsRun: { limit: 6, windowMs: 60_000 },
+  backtest: { limit: 2, windowMs: 3_600_000 },
 } satisfies Record<string, RateLimitRule>;
 
 const REDIS_PREFIX = "telaah:rl:";

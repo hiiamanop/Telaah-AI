@@ -19,8 +19,9 @@ QUERY=""
 case "${1:-}" in
   dry) QUERY="?dry=1" ;;
   force) QUERY="?dry=1&force=1" ;;
+  all) QUERY="?all=1" ;;
   "") ;;
-  *) echo "Pemakaian: $0 [dry|force]"; exit 1 ;;
+  *) echo "Pemakaian: $0 [dry|force|all]"; exit 1 ;;
 esac
 
 curl -fsS --max-time 240 \

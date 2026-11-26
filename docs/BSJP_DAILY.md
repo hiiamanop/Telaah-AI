@@ -33,7 +33,14 @@ price and fill are close enough.
 - Exclude suspension, delisting, ARA/ARB, and same-day corporate actions.
 - Exclude stocks with a spread wider than 1% at the planned entry.
 
-## 4. Entry signal
+## 4. Syariah filter
+
+The default scanner keeps only JII70 constituents. The snapshot lives in
+`src/lib/bsjp/syariah.ts` and is checked 2026-11-26; it is a conservative
+liquid syariah subset, not the complete OJK DES list. Use `all` in the scanner
+script only for research, never to present a non-syariah result as syariah.
+
+## 5. Entry signal
 
 Market regime:
 
@@ -51,7 +58,7 @@ Stock conditions:
 Score candidates and take the top 1-2. Do not chase a stock that is already
 limit-up or has a large unexplained gap.
 
-## 5. Position and risk
+## 6. Position and risk
 
 | Rule | Default |
 | --- | ---: |
@@ -67,7 +74,7 @@ BSJP risk is dominated by the overnight gap. A stop loss cannot protect a
 position between the close and the next open. Position size must assume the
 gap can be worse than the planned stop.
 
-## 6. Exit
+## 7. Exit
 
 - Sell at the next open or within 09:00-09:15 WIB.
 - If the open gaps up strongly, still sell; do not turn a day trade into a
@@ -76,7 +83,7 @@ gap can be worse than the planned stop.
   tradable price and record the exception.
 - No holding through a second night in v1.
 
-## 7. Costs
+## 8. Costs
 
 Defaults, to be verified against the broker contract:
 
@@ -88,7 +95,11 @@ Defaults, to be verified against the broker contract:
 A candidate needs an expected gross move above roughly 0.8% just to break
 even. The scanner must rank net expectancy, not raw momentum.
 
-## 8. Backtest specification
+The first 5-year backtest is documented in
+[BSJP_BACKTEST_2026-11-26.md](BSJP_BACKTEST_2026-11-26.md). It did not pass
+the acceptance criteria; the rules need work before paper trading is promoted.
+
+## 9. Backtest specification
 
 - Use at least five years of daily OHLCV.
 - Signal uses data through close T.
@@ -103,7 +114,7 @@ even. The scanner must rank net expectancy, not raw momentum.
   factor, Sharpe, max drawdown, turnover, exposure, and worst overnight gap.
 - Reject a strategy whose edge disappears after costs or depends on one stock.
 
-## 9. Paper trading
+## 10. Paper trading
 
 - Generate the candidate list at 15:45 WIB.
 - Record the intended entry and the actual 15:50 price.
@@ -112,7 +123,7 @@ even. The scanner must rank net expectancy, not raw momentum.
 - Run for at least 4-8 weeks before considering live execution.
 - Compare paper expectancy with the backtest; a large divergence blocks live.
 
-## 10. Acceptance before live
+## 11. Acceptance before live
 
 1. Positive out-of-sample expectancy after all costs.
 2. Profit factor above 1.2, with no single symbol dominating.
@@ -120,7 +131,7 @@ even. The scanner must rank net expectancy, not raw momentum.
 4. Paper results consistent with the backtest.
 5. Broker API access, manual confirmation, kill switch, and audit logging.
 
-## 11. Scheduler
+## 12. Scheduler
 
 The pre-close scan runs at 15:45 WIB on weekdays:
 
@@ -148,7 +159,7 @@ The force flag only works with `dry=1` and never sends Telegram.
 
 The endpoint is `POST /api/bsjp/scan` and requires `ALERT_SECRET`.
 
-## 12. Open decisions
+## 13. Open decisions
 
 - Universe: watchlist only, liquid IDX, or a fixed index such as IDX80?
 - Exit window: exactly at open, 09:15, or 09:30?

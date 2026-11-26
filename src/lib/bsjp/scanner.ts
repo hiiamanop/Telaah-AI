@@ -10,6 +10,7 @@ import {
   type BsjpRules,
 } from "@/lib/bsjp/evaluate";
 import { BSJP_UNIVERSE } from "@/lib/bsjp/universe";
+import { filterSyariah } from "@/lib/bsjp/syariah";
 
 export interface BsjpDataSource {
   getDailyTransactions(
@@ -37,6 +38,7 @@ export interface BsjpScanOptions {
   rules?: BsjpRules;
   sleep?: (ms: number) => Promise<void>;
   ignoreRegime?: boolean;
+  syariahOnly?: boolean;
 }
 
 function jakartaDate(date: Date): string {
@@ -118,7 +120,10 @@ export async function scanBsjp(
 ): Promise<BsjpScanResult> {
   const now = options.now ?? new Date();
   const rules = options.rules ?? DEFAULT_BSJP_RULES;
-  const universe = options.universe ?? BSJP_UNIVERSE;
+  const rawUniverse = options.universe ?? BSJP_UNIVERSE;
+  const universe = options.syariahOnly
+    ? filterSyariah(rawUniverse)
+    : rawUniverse;
   const source = options.source ?? defaultSource();
   const sleep =
     options.sleep ??
@@ -140,6 +145,9 @@ export async function scanBsjp(
     indexCandles = (await source.getIndexDaily?.()) ?? null;
   } catch {
     indexCandles = null;
+  }
+  if (options.syariahOnly) {
+    result.limitations.push("Filter syariah JII70 aktif.");
   }
   result.marketRegime = marketRegime(indexCandles);
   if (result.marketRegime === "unknown") {

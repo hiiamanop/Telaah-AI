@@ -37,8 +37,9 @@ export async function POST(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const dryRun = searchParams.get("dry") === "1";
   const ignoreRegime = dryRun && searchParams.get("force") === "1";
+  const syariahOnly = searchParams.get("all") !== "1";
   try {
-    const result = await scanBsjp({ ignoreRegime });
+    const result = await scanBsjp({ ignoreRegime, syariahOnly });
     const message = formatBsjpMessage(result);
     let sent = false;
     if (!dryRun) {

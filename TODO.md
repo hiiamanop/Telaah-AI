@@ -53,4 +53,5 @@
 - [x] Add JII70 syariah filter to BSJP scanner and backtest <!-- id=51 priority=high done=2026-11-26 created=2026-11-26 -->
 - [x] Review BSJP backtest results and decide next rule experiments <!-- id=52 priority=high done=2026-11-26 created=2026-11-26 -->
 - [ ] Test BSJP with actual 15:50 snapshots and 09:00/09:15 exits using intraday data <!-- id=53 priority=high created=2026-11-26 -->
-- [ ] Rework BSJP signal to escape next-open mean reversion and compare with random-liquid baseline <!-- id=54 priority=high created=2026-11-26 -->
+- [x] Rework BSJP signal to escape next-open mean reversion and compare with random-liquid baseline <!-- id=54 priority=high done=2026-11-26 created=2026-11-26 -->
+- [ ] Test reversal signal with 2-3 day holds and lower-cost execution model <!-- id=55 priority=high created=2026-11-26 -->

@@ -47,6 +47,8 @@ data/alerts.log
 data/stockbit-session.log
 data/bsjp.log
 data/backtests/
+data/bsjp_paper.json
+data/bsjp-paper.log
 data/alert_watchlist.json
 
 # python scraper

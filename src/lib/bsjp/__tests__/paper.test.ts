@@ -12,6 +12,7 @@ import {
 import type { BsjpCandidate } from "../evaluate";
 import type { StockbitQuote } from "@/lib/market/scraper-client";
 import { runPaperEntry, runPaperExit } from "../paper-runner";
+import { formatPaperReport, summarizePaper } from "../paper-report";
 
 const folders: string[] = [];
 
@@ -134,6 +135,26 @@ describe("BSJP paper journal", () => {
     expect(exit.closed).toHaveLength(1);
     expect(exit.sent).toBe(1);
     expect(sent.join(" ")).toContain("Paper exit");
+  });
+
+  it("summarizes paper results and slippage", async () => {
+    const file = await tempFile();
+    await recordPaperEntries(
+      [candidate],
+      new Date("2026-11-27T08:50:00Z"),
+      file
+    );
+    await closePaperPositions(
+      [quote("BRIS", 1180)],
+      new Date("2026-11-30T02:00:00Z"),
+      file
+    );
+    const store = await loadPaperPositions(file);
+    const report = summarizePaper(store.positions);
+    expect(report.closed).toBe(1);
+    expect(report.winRatePct).toBe(100);
+    expect(report.avgEntrySlippagePct).toBeCloseTo(-1.27, 2);
+    expect(formatPaperReport(report)).toContain("BSJP paper report");
   });
 
   it("formats entry and exit journal messages", () => {

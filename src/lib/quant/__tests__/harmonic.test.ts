@@ -116,6 +116,9 @@ describe("detectHarmonicPatterns", () => {
     expect(gartley?.distancePct).toBe(0);
     expect(gartley?.invalidation).toBeLessThan(gartley?.prz.low ?? 0);
     expect(gartley?.score).toBeGreaterThan(60);
+    expect(gartley?.pivotPrices?.x).toBeGreaterThan(0);
+    expect(gartley?.pivotPrices?.d).toBeGreaterThan(0);
+    expect(gartley?.pivotPrices?.d).toBeLessThan(gartley?.pivotPrices?.c ?? 0);
   });
 
   it("drops a setup that has already broken its invalidation", () => {

@@ -20,6 +20,7 @@ import { SymbolSearch } from "@/components/SymbolSearch";
 import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
 import { getCompanyName } from "@/lib/sectors/companies";
+import type { HarmonicMatch } from "@/lib/quant/harmonic";
 import { getWatchlistSymbols } from "@/lib/storage/history";
 
 const TIMEFRAMES: Array<{ key: ChartTimeframe; label: string }> = [
@@ -84,6 +85,9 @@ export default function ChartPage() {
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1W");
   const [hydrated, setHydrated] = useState(false);
   const [quickSymbols, setQuickSymbols] = useState<string[]>(POPULAR);
+  const [harmonicEnabled, setHarmonicEnabled] = useState(true);
+  const [harmonicMatches, setHarmonicMatches] = useState<HarmonicMatch[]>([]);
+  const [harmonicLoading, setHarmonicLoading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -126,6 +130,36 @@ export default function ChartPage() {
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
 
+  useEffect(() => {
+    const canOverlay = timeframe === "1Y" || timeframe === "5Y";
+    if (!hydrated || !harmonicEnabled || !canOverlay) {
+      setHarmonicMatches([]);
+      setHarmonicLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setHarmonicLoading(true);
+    fetch(`/api/harmonic?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.matches)) {
+          setHarmonicMatches(data.matches);
+        } else {
+          setHarmonicMatches([]);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setHarmonicMatches([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setHarmonicLoading(false);
+      });
+    return () => controller.abort();
+  }, [symbol, timeframe, hydrated, harmonicEnabled]);
+
   const { frame, status, error, reconnect } = useChartStream(
     symbol,
     timeframe,
@@ -135,6 +169,7 @@ export default function ChartPage() {
   const current = frame?.symbol === symbol ? frame : null;
   const change = useMemo(() => changeOf(current), [current]);
   const companyName = getCompanyName(symbol) ?? `PT ${symbol} Tbk`;
+  const harmonic = harmonicEnabled ? harmonicMatches[0] ?? null : null;
   const candle = current?.last;
   const session = useMemo(() => {
     const bars = current?.candles ?? [];
@@ -286,6 +321,45 @@ export default function ChartPage() {
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3.5 py-2 dark:border-white/[0.06] sm:px-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHarmonicEnabled((value) => !value)}
+                  className={`rounded-md border px-2 py-1 font-mono text-[10px] transition ${
+                    harmonicEnabled
+                      ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+                      : "border-slate-200 text-slate-500 hover:text-zinc-900 dark:border-white/10 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                  aria-pressed={harmonicEnabled}
+                >
+                  Harmonic {harmonicEnabled ? "on" : "off"}
+                </button>
+                {harmonicLoading ? (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    memuat pola...
+                  </span>
+                ) : harmonic ? (
+                  <span className="truncate text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                    <b className="text-zinc-800 dark:text-zinc-200">{harmonic.pattern}</b>{" "}
+                    {harmonic.timeframe} · PRZ Rp {harmonic.prz.low.toLocaleString("id-ID", { maximumFractionDigits: 0 })}–{harmonic.prz.high.toLocaleString("id-ID", { maximumFractionDigits: 0 })} · invalidasi Rp {harmonic.invalidation.toLocaleString("id-ID", { maximumFractionDigits: 0 })}
+                  </span>
+                ) : harmonicEnabled && timeframe !== "1Y" && timeframe !== "5Y" ? (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    overlay harmonic tersedia di 1Y atau 5Y
+                  </span>
+                ) : harmonicEnabled ? (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    tidak ada pola pada timeframe ini
+                  </span>
+                ) : null}
+              </div>
+              {harmonic && (
+                <span className="text-[10px] font-mono text-slate-400">
+                  T1 Rp {harmonic.targets.t1.toLocaleString("id-ID", { maximumFractionDigits: 0 })} · T2 Rp {harmonic.targets.t2.toLocaleString("id-ID", { maximumFractionDigits: 0 })}
+                </span>
+              )}
+            </div>
             <div className="p-3 sm:p-4">
               {!hydrated || (!current && status !== "offline") ? (
                 <div className="flex h-[460px] flex-col items-center justify-center gap-2 text-xs font-mono text-slate-500 dark:text-slate-400">
@@ -316,6 +390,7 @@ export default function ChartPage() {
                     candles={current.candles}
                     intraday={timeframe === "1D" || timeframe === "1W"}
                     dataKey={`${current.symbol}:${current.timeframe}`}
+                    harmonic={harmonic}
                     height={460}
                   />
                   {current.timeframe === "1D" && current.candles.length < 10 && (

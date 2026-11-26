@@ -8,17 +8,22 @@ import {
   type CandlestickData,
   type HistogramData,
   type IChartApi,
+  type IPriceLine,
+  LineStyle,
+  type SeriesMarker,
   TickMarkType,
   type ISeriesApi,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { ChartCandle } from "@/lib/market/scraper-client";
+import type { HarmonicMatch } from "@/lib/quant/harmonic";
 
 interface LiveChartProps {
   candles: ChartCandle[];
   intraday: boolean;
   dataKey: string;
+  harmonic?: HarmonicMatch | null;
   height?: number;
 }
 
@@ -85,6 +90,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   candles,
   intraday,
   dataKey,
+  harmonic = null,
   height = 460,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +101,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   const firstTimeRef = useRef<string>("");
   const lastTimeRef = useRef<string>("");
   const candlesRef = useRef<ChartCandle[]>(candles);
+  const harmonicSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const harmonicLinesRef = useRef<IPriceLine[]>([]);
   const [hovered, setHovered] = useState<ChartCandle | null>(null);
   const [isDark, setIsDark] = useState(true);
 
@@ -219,8 +227,135 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       chartRef.current = null;
       candleRef.current = null;
       volumeRef.current = null;
+      harmonicSeriesRef.current = null;
+      harmonicLinesRef.current = [];
     };
   }, [height, intraday]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const candleSeries = candleRef.current;
+    if (!chart || !candleSeries) return;
+
+    candleSeries.setMarkers([]);
+    if (harmonicSeriesRef.current) {
+      try {
+        chart.removeSeries(harmonicSeriesRef.current);
+      } catch {
+        // Chart was already recreated.
+      }
+      harmonicSeriesRef.current = null;
+    }
+    for (const line of harmonicLinesRef.current) {
+      try {
+        candleSeries.removePriceLine(line);
+      } catch {
+        // Chart was already recreated.
+      }
+    }
+    harmonicLinesRef.current = [];
+
+    if (!harmonic?.pivotPrices) return;
+
+    const sourceCandles = candlesRef.current;
+    const dates = [
+      harmonic.pivotDates.x,
+      harmonic.pivotDates.a,
+      harmonic.pivotDates.b,
+      harmonic.pivotDates.c,
+      harmonic.pivotDates.d,
+    ];
+    const values = [
+      harmonic.pivotPrices.x,
+      harmonic.pivotPrices.a,
+      harmonic.pivotPrices.b,
+      harmonic.pivotPrices.c,
+      harmonic.pivotPrices.d,
+    ];
+    const points: Array<{ time: Time; value: number }> = [];
+    const markers: SeriesMarker<Time>[] = [];
+    const labels = ["X", "A", "B", "C", "D"];
+    const bullish = harmonic.direction === "bullish";
+
+    dates.forEach((date, index) => {
+      let best: ChartCandle | null = null;
+      let bestDiff = Number.POSITIVE_INFINITY;
+      for (const candle of sourceCandles) {
+        if (!candle.date) continue;
+        const diff = Math.abs(Date.parse(candle.date) - Date.parse(date));
+        if (diff < bestDiff) {
+          best = candle;
+          bestDiff = diff;
+        }
+      }
+      if (!best) return;
+      const time = chartTime(best, intraday);
+      if (points.some((point) => point.time === time)) return;
+      points.push({ time, value: values[index] });
+      markers.push({
+        time,
+        position:
+          (index % 2 === 0 ? bullish : !bullish) ? "belowBar" : "aboveBar",
+        color: bullish ? "#10b981" : "#f43f5e",
+        shape: "circle",
+        text: labels[index],
+      });
+    });
+
+    if (points.length >= 2) {
+      const line = chart.addLineSeries({
+        color: bullish ? "#34d399" : "#fb7185",
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      line.setData(points);
+      harmonicSeriesRef.current = line;
+    }
+    if (markers.length > 0) candleSeries.setMarkers(markers);
+
+    const lines: IPriceLine[] = [];
+    const addLine = (price: number, color: string, title: string, style = LineStyle.Dashed) => {
+      if (!Number.isFinite(price) || price <= 0) return;
+      lines.push(
+        candleSeries.createPriceLine({
+          price,
+          color,
+          lineWidth: 1,
+          lineStyle: style,
+          axisLabelVisible: true,
+          title,
+        })
+      );
+    };
+    addLine(harmonic.prz.high, bullish ? "#10b981" : "#f43f5e", "PRZ");
+    addLine(harmonic.prz.low, bullish ? "#10b981" : "#f43f5e", "PRZ");
+    addLine(harmonic.invalidation, "#ef4444", "Invalidasi");
+    addLine(harmonic.targets.t1, "#60a5fa", "T1", LineStyle.Dotted);
+    addLine(harmonic.targets.t2, "#60a5fa", "T2", LineStyle.Dotted);
+    harmonicLinesRef.current = lines;
+
+    return () => {
+      for (const line of lines) {
+        try {
+          candleSeries.removePriceLine(line);
+        } catch {
+          // Chart was already recreated.
+        }
+      }
+      if (harmonicSeriesRef.current) {
+        try {
+          chart.removeSeries(harmonicSeriesRef.current);
+        } catch {
+          // Chart was already recreated.
+        }
+        harmonicSeriesRef.current = null;
+      }
+      candleSeries.setMarkers([]);
+    };
+  }, [harmonic, intraday, dataKey, candles.length]);
 
   useEffect(() => {
     if (!candleRef.current || !volumeRef.current || candles.length === 0) return;

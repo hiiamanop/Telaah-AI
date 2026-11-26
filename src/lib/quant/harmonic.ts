@@ -48,6 +48,7 @@ export interface HarmonicMatch {
   direction: HarmonicDirection;
   status: HarmonicStatus;
   pivotDates: { x: string; a: string; b: string; c: string; d: string };
+  pivotPrices?: { x: number; a: number; b: number; c: number; d: number };
   ratios: HarmonicRatios;
   prz: { low: number; high: number };
   price: number;
@@ -501,6 +502,13 @@ function buildMatch(params: {
           ? window[4].date
           : window[3].date,
     },
+    pivotPrices: {
+      x: round(window[0].price),
+      a: round(window[1].price),
+      b: round(window[2].price),
+      c: round(window[3].price),
+      d: round(status === "completed" ? window[4].price : dPrice),
+    },
     ratios: evaluation.ratios,
     prz: evaluation.prz,
     price: round(currentPrice),
@@ -669,7 +677,26 @@ export function detectHarmonicPatterns(
     }
   }
 
-  return matches.sort((left, right) => {
+  const bestByD = new Map<string, HarmonicMatch>();
+  for (const match of matches) {
+    const key = [
+      match.timeframe,
+      match.direction,
+      match.pattern,
+      match.status,
+      match.pivotDates.d,
+    ].join("|");
+    const existing = bestByD.get(key);
+    if (
+      !existing ||
+      match.fitScore > existing.fitScore ||
+      (match.fitScore === existing.fitScore && match.score > existing.score)
+    ) {
+      bestByD.set(key, match);
+    }
+  }
+
+  return [...bestByD.values()].sort((left, right) => {
     if (right.score !== left.score) return right.score - left.score;
     return Math.abs(left.distancePct) - Math.abs(right.distancePct);
   });

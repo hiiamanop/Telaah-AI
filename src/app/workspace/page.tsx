@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Activity,
   BarChart3,
-  Bookmark,
   Filter,
   LayoutGrid,
   Loader2,
@@ -24,7 +23,6 @@ import {
   loadLastWorkspace,
   loadWorkspaceLayouts,
   saveLastWorkspace,
-  saveWorkspaceLayout,
   type WorkspaceLayout,
   type WorkspacePanel,
 } from "@/lib/workspace/layouts";
@@ -59,8 +57,7 @@ export default function WorkspacePage() {
   const [layouts, setLayouts] = useState<WorkspaceLayout[]>([]);
   const [layoutId, setLayoutId] = useState("swing");
   const [panels, setPanels] = useState<WorkspacePanel[]>([]);
-  const [symbol, setSymbol] = useState("BBCA");
-  const [layoutName, setLayoutName] = useState("");
+  const [symbol, setSymbol] = useState("IHSG");
   const [harmonicScan, setHarmonicScan] = useState<HarmonicScanResult | null>(
     null
   );
@@ -186,19 +183,6 @@ export default function WorkspacePage() {
     setLayoutId(id);
     setPanels(layout.panels);
     setSymbol(layout.symbol);
-    setLayoutName("");
-  };
-
-  const saveLayout = () => {
-    const name = layoutName.trim();
-    if (!name) return;
-    const next = saveWorkspaceLayout(name, panels, symbol);
-    setLayouts(next);
-    const saved = next.find(
-      (item) => item.name.toLowerCase() === name.toLowerCase()
-    );
-    if (saved) setLayoutId(saved.id);
-    setLayoutName("");
   };
 
   const deleteLayout = () => {
@@ -266,21 +250,6 @@ export default function WorkspacePage() {
                 </option>
               ))}
             </select>
-            <input
-              value={layoutName}
-              onChange={(event) => setLayoutName(event.target.value)}
-              placeholder="Nama layout"
-              className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 font-mono text-[11px] text-zinc-700 outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
-            />
-            <button
-              type="button"
-              onClick={saveLayout}
-              disabled={!layoutName.trim()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-[11px] font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-              Simpan
-            </button>
             {!["swing", "monitor", "research"].includes(layoutId) && (
               <button
                 type="button"

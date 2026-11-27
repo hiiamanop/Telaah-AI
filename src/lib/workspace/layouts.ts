@@ -15,7 +15,7 @@ export interface WorkspaceLayout {
 }
 
 const STORAGE_KEY = "telaah_workspace_layouts_v1";
-const LAST_KEY = "telaah_workspace_last_v1";
+const LAST_KEY = "telaah_workspace_last_v2";
 const MAX_CUSTOM = 10;
 
 export const DEFAULT_LAYOUTS: WorkspaceLayout[] = [
@@ -23,19 +23,19 @@ export const DEFAULT_LAYOUTS: WorkspaceLayout[] = [
     id: "swing",
     name: "Swing",
     panels: ["chart", "harmonic", "watchlist", "screener"],
-    symbol: "BBCA",
+    symbol: "IHSG",
   },
   {
     id: "monitor",
     name: "Monitor",
     panels: ["chart", "watchlist", "screener", "harmonic"],
-    symbol: "BBCA",
+    symbol: "IHSG",
   },
   {
     id: "research",
     name: "Research",
     panels: ["chart", "harmonic", "screener", "watchlist"],
-    symbol: "BBCA",
+    symbol: "IHSG",
   },
 ];
 
@@ -123,7 +123,7 @@ export function saveWorkspaceLayout(
     id: existing?.id ?? `custom_${Date.now().toString(36)}`,
     name: cleanName,
     panels: validatePanels(panels),
-    symbol: /^[A-Z]{4}$/.test(symbol) ? symbol : "BBCA",
+    symbol: /^[A-Z]{4}$/.test(symbol) ? symbol : "IHSG",
   };
   const next = existing
     ? current.map((item) => (item.id === existing.id ? layout : item))
@@ -139,7 +139,7 @@ export function deleteWorkspaceLayout(id: string): WorkspaceLayout[] {
 
 export function loadLastWorkspace(): { layoutId: string; symbol: string } {
   if (typeof window === "undefined") {
-    return { layoutId: "swing", symbol: "BBCA" };
+    return { layoutId: "swing", symbol: "IHSG" };
   }
   try {
     const parsed = JSON.parse(localStorage.getItem(LAST_KEY) || "{}") as {
@@ -152,10 +152,10 @@ export function loadLastWorkspace(): { layoutId: string; symbol: string } {
       symbol:
         typeof parsed.symbol === "string" && /^[A-Z]{4}$/.test(parsed.symbol)
           ? parsed.symbol
-          : "BBCA",
+          : "IHSG",
     };
   } catch {
-    return { layoutId: "swing", symbol: "BBCA" };
+    return { layoutId: "swing", symbol: "IHSG" };
   }
 }
 
@@ -165,7 +165,7 @@ export function saveLastWorkspace(layoutId: string, symbol: string): void {
     LAST_KEY,
     JSON.stringify({
       layoutId,
-      symbol: /^[A-Z]{4}$/.test(symbol) ? symbol : "BBCA",
+      symbol: /^[A-Z]{4}$/.test(symbol) ? symbol : "IHSG",
     })
   );
 }

@@ -778,12 +778,12 @@ export default function Home() {
         <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
           {viewMode === "chat" ? (
             /* =========================================================================
-                CHATGPT-STYLE CENTER CONVERSATION STAGE (max-w-3xl)
+                CHATGPT-STYLE CENTER CONVERSATION STAGE (max-w-5xl)
                 ========================================================================= */
             <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-black relative">
               {/* Conversation Feed */}
-              <div className="flex-1 overflow-y-auto px-4 py-6">
-                <div className="max-w-3xl mx-auto w-full">
+              <div className="flex-1 min-h-0 overflow-hidden px-4 py-6">
+                <div className="max-w-5xl mx-auto w-full h-full flex flex-col min-h-0">
                   <ChatFeed
                     messages={messages}
                     isLoading={isLoading || isWorkstationLoading}
@@ -817,7 +817,7 @@ export default function Home() {
               {/* Quick Contextual Prompts Strip when report exists */}
               {report && (
                 <div className="border-t border-slate-200 dark:border-white/10 bg-white dark:bg-black/90 py-2 shrink-0">
-                  <div className="max-w-3xl mx-auto px-4 flex items-center gap-2 overflow-x-auto text-[11px] font-mono no-scrollbar">
+                  <div className="max-w-5xl mx-auto px-4 flex items-center gap-2 overflow-x-auto text-[11px] font-mono no-scrollbar">
                     <span className="text-slate-500 text-[10px] uppercase font-bold shrink-0">{t("quick.title", "Tanya Cepat:")}</span>
                     <button
                       onClick={() => handleChatSend(`Berapa dividen yield dan perkiraan dividen tunai ${report.symbol}?`, "quick")}
@@ -849,7 +849,7 @@ export default function Home() {
 
               {/* Centered Floating Prompt Input Bar */}
               <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-black shrink-0">
-                <div className="max-w-3xl mx-auto w-full">
+                <div className="max-w-5xl mx-auto w-full">
                   <ChatInput
                     onSend={handleChatSend}
                     isLoading={isLoading || isWorkstationLoading}

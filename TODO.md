@@ -83,3 +83,4 @@
 - [x] Add HBA coal benchmark to Macro & markets <!-- id=81 priority=medium done=2026-11-27 created=2026-11-27 -->
 - [x] Fix harmonic 429, nav order, and empty workspace watchlist <!-- id=82 priority=high done=2026-11-27 created=2026-11-27 -->
 - [x] Repair main after fork merge and run smoke tests <!-- id=83 priority=high done=2026-11-27 created=2026-11-27 -->
+- [ ] Add automatic IDX filing/news ingestion for financial periods missing from provider <!-- id=84 priority=high created=2026-11-27 -->

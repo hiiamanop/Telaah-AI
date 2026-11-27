@@ -17,6 +17,7 @@ const config: TelegramConfig = {
 
 function scan(): HarmonicScanResult {
   return {
+    version: 2,
     generatedAt: "2026-11-24T01:00:00.000Z",
     date: "2026-11-24",
     universeSize: 88,
@@ -51,6 +52,7 @@ function scan(): HarmonicScanResult {
           score: 99,
           generatedAt: "2026-11-24T01:00:00.000Z",
         },
+        matches: [],
         timeframes: ["1M"],
         confluenceCount: 1,
         score: 99,
@@ -83,6 +85,7 @@ function scan(): HarmonicScanResult {
           score: 90,
           generatedAt: "2026-11-24T01:00:00.000Z",
         },
+        matches: [],
         timeframes: ["1D", "4H"],
         confluenceCount: 2,
         score: 90,

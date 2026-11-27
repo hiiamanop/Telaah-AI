@@ -18,6 +18,7 @@ export interface HistoricalPattern {
   direction: HarmonicDirection;
   dIndex: number;
   dDate: string;
+  entry: number;
   prz: { low: number; high: number };
   invalidation: number;
   targets: { t1: number; t2: number };
@@ -31,6 +32,18 @@ export interface PatternOutcome {
   daysToT2: number | null;
 }
 
+export interface SegmentStat {
+  total: number;
+  t1Hits: number;
+  t1RatePct: number;
+}
+
+export type WalkForwardVerdict =
+  | "stable"
+  | "improved"
+  | "decayed"
+  | "insufficient";
+
 export interface PatternStat {
   pattern: HarmonicPattern;
   direction: HarmonicDirection;
@@ -43,6 +56,12 @@ export interface PatternStat {
   t1RatePct: number;
   t2RatePct: number;
   avgDaysToT1: number | null;
+  avgT1MovePct: number | null;
+  netAvgT1Pct: number | null;
+  firstHalf: SegmentStat;
+  secondHalf: SegmentStat;
+  walkForwardDeltaPct: number | null;
+  walkForwardVerdict: WalkForwardVerdict;
 }
 
 export interface HarmonicStatsResult {
@@ -50,6 +69,8 @@ export interface HarmonicStatsResult {
   timeframes: HarmonicTimeframe[];
   symbols: number;
   patterns: number;
+  feePct: number;
+  walkForwardSplitPct: number;
   stats: PatternStat[];
   limitations: string[];
 }
@@ -126,6 +147,7 @@ export function detectHistoricalPatterns(
         direction,
         dIndex: window[4].index,
         dDate: window[4].date,
+        entry: dPrice,
         prz: evaluation.prz,
         invalidation,
         targets: { t1: window[3].price, t2: window[1].price },
@@ -194,14 +216,41 @@ export function measurePatternOutcome(
   };
 }
 
+function emptySegment(): SegmentStat {
+  return { total: 0, t1Hits: 0, t1RatePct: 0 };
+}
+
+function withRate(segment: SegmentStat): SegmentStat {
+  return {
+    ...segment,
+    t1RatePct: segment.total ? (segment.t1Hits / segment.total) * 100 : 0,
+  };
+}
+
 export function aggregateOutcomes(
-  pairs: Array<{ pattern: HistoricalPattern; outcome: PatternOutcome }>
+  pairs: Array<{
+    pattern: HistoricalPattern;
+    outcome: PatternOutcome;
+    segment?: "first" | "second";
+  }>,
+  options: { feePct?: number } = {}
 ): PatternStat[] {
+  const feePct = options.feePct ?? 0;
   const groups = new Map<string, PatternStat>();
-  for (const { pattern, outcome } of pairs) {
-    const key = `${pattern.pattern}|${pattern.direction}`;
+  const samplesByGroup = new Map<
+    string,
+    Array<{ pattern: HistoricalPattern; outcome: PatternOutcome }>
+  >();
+  const segmentsByGroup = new Map<
+    string,
+    { first: SegmentStat; second: SegmentStat }
+  >();
+
+  for (const { pattern, outcome, segment } of pairs) {
+    const key = `${pattern.pattern}|${pattern.direction}|${pattern.timeframe}`;
     const stat =
-      groups.get(key) ?? {
+      groups.get(key) ??
+      {
         pattern: pattern.pattern,
         direction: pattern.direction,
         timeframe: pattern.timeframe,
@@ -213,6 +262,12 @@ export function aggregateOutcomes(
         t1RatePct: 0,
         t2RatePct: 0,
         avgDaysToT1: null,
+        avgT1MovePct: null,
+        netAvgT1Pct: null,
+        firstHalf: emptySegment(),
+        secondHalf: emptySegment(),
+        walkForwardDeltaPct: null,
+        walkForwardVerdict: "insufficient" as const,
       };
     stat.total += 1;
     if (outcome.status === "t1" || outcome.status === "t2") stat.t1Hits += 1;
@@ -220,25 +275,69 @@ export function aggregateOutcomes(
     if (outcome.status === "invalidated") stat.invalidated += 1;
     if (outcome.status === "timeout") stat.timeout += 1;
     groups.set(key, stat);
-  }
 
-  return [...groups.values()].map((stat) => {
-    const t1Days: number[] = [];
-    for (const { pattern, outcome } of pairs) {
-      if (
-        pattern.pattern === stat.pattern &&
-        pattern.direction === stat.direction &&
-        pattern.timeframe === stat.timeframe &&
-        outcome.daysToT1 !== null
-      ) {
-        t1Days.push(outcome.daysToT1);
+    const samples = samplesByGroup.get(key) ?? [];
+    samples.push({ pattern, outcome });
+    samplesByGroup.set(key, samples);
+
+    const segments =
+      segmentsByGroup.get(key) ?? { first: emptySegment(), second: emptySegment() };
+    if (segment === "first" || segment === "second") {
+      const target = segments[segment];
+      target.total += 1;
+      if (outcome.status === "t1" || outcome.status === "t2") {
+        target.t1Hits += 1;
       }
     }
+    segmentsByGroup.set(key, segments);
+  }
+
+  return [...groups.entries()].map(([key, stat]) => {
+    const samples = samplesByGroup.get(key) ?? [];
+    const t1Days = samples
+      .map(({ outcome }) => outcome.daysToT1)
+      .filter((days): days is number => days !== null);
+    const moves = samples
+      .map(({ pattern }) => {
+        if (!pattern.entry || pattern.entry <= 0) return null;
+        const move =
+          pattern.direction === "bullish"
+            ? ((pattern.targets.t1 - pattern.entry) / pattern.entry) * 100
+            : ((pattern.entry - pattern.targets.t1) / pattern.entry) * 100;
+        return Number.isFinite(move) ? move : null;
+      })
+      .filter((move): move is number => move !== null);
+    const avgT1MovePct = moves.length ? average(moves) : null;
+    const segments =
+      segmentsByGroup.get(key) ?? { first: emptySegment(), second: emptySegment() };
+    const firstHalf = withRate(segments.first);
+    const secondHalf = withRate(segments.second);
+    const hasWalkForward = firstHalf.total >= 5 && secondHalf.total >= 5;
+    const walkForwardDeltaPct = hasWalkForward
+      ? secondHalf.t1RatePct - firstHalf.t1RatePct
+      : null;
+    let walkForwardVerdict: PatternStat["walkForwardVerdict"] = "insufficient";
+    if (walkForwardDeltaPct !== null) {
+      if (walkForwardDeltaPct > 15) walkForwardVerdict = "improved";
+      else if (walkForwardDeltaPct < -15) walkForwardVerdict = "decayed";
+      else walkForwardVerdict = "stable";
+    }
+
     return {
       ...stat,
       t1RatePct: stat.total ? (stat.t1Hits / stat.total) * 100 : 0,
       t2RatePct: stat.total ? (stat.t2Hits / stat.total) * 100 : 0,
       avgDaysToT1: t1Days.length ? average(t1Days) : null,
+      avgT1MovePct,
+      netAvgT1Pct:
+        avgT1MovePct === null ? null : Number((avgT1MovePct - feePct).toFixed(2)),
+      firstHalf,
+      secondHalf,
+      walkForwardDeltaPct:
+        walkForwardDeltaPct === null
+          ? null
+          : Number(walkForwardDeltaPct.toFixed(1)),
+      walkForwardVerdict,
     };
   });
 }
@@ -268,17 +367,24 @@ export async function runHarmonicStats(
     timeframes?: HarmonicTimeframe[];
     symbols?: string[];
     years?: number;
+    feePct?: number;
   } = {}
 ): Promise<HarmonicStatsResult> {
   const timeframes = options.timeframes ?? ["4H", "1D", "1W", "1M"];
-  const symbols = options.symbols ?? LIQUID_IDX_UNIVERSE.slice(0, 40);
+  const symbols = options.symbols ?? LIQUID_IDX_UNIVERSE;
   const years = options.years ?? 5;
+  const feePct = options.feePct ?? 0.4;
+  const walkForwardSplitPct = 60;
   const start = new Date(Date.now() - years * 365 * 86_400_000)
     .toISOString()
     .slice(0, 10);
   const yahoo = new YahooClient();
   const limitations: string[] = [];
-  const pairs: Array<{ pattern: HistoricalPattern; outcome: PatternOutcome }> = [];
+  const pairs: Array<{
+    pattern: HistoricalPattern;
+    outcome: PatternOutcome;
+    segment: "first" | "second";
+  }> = [];
 
   const rows = await mapLimit(symbols, 4, async (symbol) => {
     try {
@@ -311,10 +417,12 @@ export async function runHarmonicStats(
       }
       const candles = buildTimeframeCandles(source, timeframe);
       const patterns = detectHistoricalPatterns(row.symbol, candles, timeframe);
+      const splitIndex = Math.floor((candles.length * walkForwardSplitPct) / 100);
       for (const pattern of patterns) {
         pairs.push({
           pattern,
           outcome: measurePatternOutcome(pattern, candles),
+          segment: pattern.dIndex < splitIndex ? "first" : "second",
         });
       }
     }
@@ -325,12 +433,16 @@ export async function runHarmonicStats(
     timeframes,
     symbols: symbols.length,
     patterns: pairs.length,
-    stats: aggregateOutcomes(pairs).sort(
+    feePct,
+    walkForwardSplitPct,
+    stats: aggregateOutcomes(pairs, { feePct }).sort(
       (left, right) => right.total - left.total
     ),
     limitations: [
       `Sampel ${symbols.length} emiten likuid, ${years} tahun, timeframe ${timeframes.join("/")}.`,
       "4H memakai data hourly Yahoo yang lebih pendek dari 5 tahun.",
+      `Walk-forward: ${walkForwardSplitPct}% data pertama vs sisa data; bukan out-of-sample murni.`,
+      `Net T1 memakai fee round-trip ${feePct}% dan belum memasukkan slippage per emiten.`,
       "Pola dihitung ulang pada data historis; bukan rekomendasi.",
       ...limitations,
     ],

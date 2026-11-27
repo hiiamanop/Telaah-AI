@@ -14,9 +14,42 @@ import {
 import { buildBankShortlistMessage } from "@/lib/screener/bank-screener";
 import { getMarketProvider } from "@/lib/market";
 import {
+  getTodayWIB,
   searchSemanticReportCache,
   upsertReportToVectorCache,
 } from "@/lib/vector/qdrant";
+import { cacheGet, cacheSet, hashKey } from "@/lib/storage/json-cache";
+import { searchHarmonicKnowledge } from "@/lib/vector/harmonic-knowledge";
+
+const HARMONIC_TERMS =
+  /harmonic|prz|gartley|bat|butterfly|crab|shark|cypher/i;
+const HARMONIC_LEARNING_TERMS =
+  /apa itu|jelaskan|cara|aturan|pengertian|definisi|ratio|invalidasi|invalidation|entry|risk|belajar|mitos/i;
+
+function harmonicKnowledgeReply(
+  prompt: string,
+  hits: Awaited<ReturnType<typeof searchHarmonicKnowledge>>
+): string | null {
+  if (hits.length === 0) return null;
+  const top = hits.slice(0, 3);
+  return [
+    "📚 **Harmonic knowledge**",
+    ...top.map(
+      (hit) =>
+        `**${hit.doc.pattern} · ${hit.doc.title}**\n${hit.doc.content}\nSumber: ${hit.doc.source}`
+    ),
+  ].join("\n\n");
+}
+
+function exactTerminalKey(
+  prompt: string,
+  mode: AnalysisMode,
+  symbol: string
+): string {
+  return `terminal:exact:${getTodayWIB()}:${hashKey(
+    `${prompt}|${mode}|${symbol}`
+  )}`;
+}
 
 export type AnalysisResult =
   | { type: "error"; status: number; message: string }
@@ -61,6 +94,16 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
     return { type: "message", message: INJECTION_REFUSAL };
   }
 
+  if (
+    !confirmedSymbol &&
+    HARMONIC_TERMS.test(prompt) &&
+    HARMONIC_LEARNING_TERMS.test(prompt)
+  ) {
+    const hits = await searchHarmonicKnowledge(prompt, { limit: 3 });
+    const reply = harmonicKnowledgeReply(prompt, hits);
+    if (reply) return { type: "message", message: reply };
+  }
+
   const sectorRequest = detectSectorRequest(prompt);
   if (sectorRequest) {
     return { type: "message", message: await buildBankShortlistMessage() };
@@ -71,10 +114,24 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
     return { type: "message", message: conversationalReply(conversationalIntent) };
   }
 
-  // Fast-path: Check semantic cache if confirmedSymbol is passed
+  // Exact prompt cache: avoids even the embedding call for a repeat prompt.
   if (confirmedSymbol && /^[A-Z]{4}$/.test(confirmedSymbol)) {
+    const exactKey = exactTerminalKey(prompt, mode, confirmedSymbol);
+    const exact = await cacheGet<CompanyIntelligenceReport>(exactKey);
+    if (exact) {
+      return {
+        type: "report",
+        report: {
+          ...exact,
+          fromVectorCache: true,
+          cacheScore: 1,
+          cacheDate: getTodayWIB(),
+        },
+      };
+    }
     const cacheCheck = await searchSemanticReportCache(prompt, confirmedSymbol, 0.88, mode);
     if (cacheCheck.isMatch && cacheCheck.isFresh && cacheCheck.payload?.report) {
+      await cacheSet(exactKey, cacheCheck.payload.report, 18 * 3600);
       return {
         type: "report",
         report: {
@@ -125,9 +182,23 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
     return { type: "message", message: NO_SYMBOL_MESSAGE };
   }
 
-  // Step 1b: Semantic Vector Cache Check with targetSymbol
+  // Step 1b: Exact cache, then semantic vector cache with targetSymbol.
+  const exactKey = exactTerminalKey(prompt, mode, targetSymbol);
+  const exact = await cacheGet<CompanyIntelligenceReport>(exactKey);
+  if (exact) {
+    return {
+      type: "report",
+      report: {
+        ...exact,
+        fromVectorCache: true,
+        cacheScore: 1,
+        cacheDate: getTodayWIB(),
+      },
+    };
+  }
   const cacheHit = await searchSemanticReportCache(prompt, targetSymbol, 0.88, mode);
   if (cacheHit.isMatch && cacheHit.isFresh && cacheHit.payload?.report) {
+    await cacheSet(exactKey, cacheHit.payload.report, 18 * 3600);
     return {
       type: "report",
       report: {
@@ -158,10 +229,15 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
     classification.claims
   );
 
-  // Step 4: Asynchronously update Qdrant Vector Cache with today's capturedDate
-  upsertReportToVectorCache(prompt, targetSymbol, report, mode).catch((err) => {
-    console.warn("Failed to async upsert report to Qdrant:", err);
-  });
+  // Step 4: Save the exact prompt result and asynchronously update Qdrant.
+  await cacheSet(exactKey, report, 18 * 3600);
+  upsertReportToVectorCache(prompt, targetSymbol, report, mode)
+    .then((ok) => {
+      if (!ok) console.warn("Qdrant vector cache upsert did not complete.");
+    })
+    .catch((err) => {
+      console.warn("Failed to async upsert report to Qdrant:", err);
+    });
 
   return { type: "report", report };
 }

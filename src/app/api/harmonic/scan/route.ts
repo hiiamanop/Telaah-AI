@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
-import { scanHarmonicUniverse } from "@/lib/screener/harmonic-screener";
+import {
+  scanHarmonicUniverse,
+  type HarmonicScanResult,
+} from "@/lib/screener/harmonic-screener";
+import { cacheGet, cacheSet } from "@/lib/storage/json-cache";
 import { RATE_LIMIT_RULES, guardRateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +34,20 @@ export async function GET(req: NextRequest) {
       : `harmonic_cache_${direction}.json`
   );
   try {
+    const redisKey = `harmonic:scan:v2:${direction}`;
+    if (!refresh) {
+      const cached = await cacheGet<HarmonicScanResult>(redisKey);
+      if (cached) {
+        return NextResponse.json({ success: true, cached: true, ...cached });
+      }
+    }
     const result = await scanHarmonicUniverse({
       refresh,
       direction,
       cachePath,
     });
-    return NextResponse.json({ success: true, ...result });
+    await cacheSet(redisKey, result, 12 * 3600);
+    return NextResponse.json({ success: true, cached: false, ...result });
   } catch (error) {
     return NextResponse.json(
       {

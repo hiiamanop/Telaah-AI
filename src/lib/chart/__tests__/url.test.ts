@@ -9,4 +9,10 @@ describe("chartQuery", () => {
   it("omits htf when there is no harmonic timeframe", () => {
     expect(chartQuery("ADMR", "1Y", null)).toBe("symbol=ADMR&tf=1Y");
   });
+
+  it("keeps the compare symbol in the URL", () => {
+    expect(chartQuery("ADMR", "1Y", "1M", "BBRI")).toBe(
+      "symbol=ADMR&tf=1Y&htf=1M&compare=BBRI"
+    );
+  });
 });

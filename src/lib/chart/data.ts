@@ -175,7 +175,13 @@ export async function writeChartCache(payload: ChartPayload): Promise<void> {
   const client = await getRedisReady();
   if (!client) return;
   try {
-    const ttl = idxMarketState().open ? 60_000 : 6 * 60 * 60_000;
+    const ttl = idxMarketState().open
+      ? payload.timeframe === "1D"
+        ? 60_000
+        : payload.timeframe === "1W"
+          ? 5 * 60_000
+          : 30 * 60_000
+      : 24 * 60 * 60_000;
     await client.set(
       chartCacheKey(payload.symbol, payload.timeframe),
       JSON.stringify(payload),

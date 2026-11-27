@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Search,
   Activity,
+  BookOpen,
   Star,
 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -19,6 +20,7 @@ import type {
   HarmonicScanResult,
 } from "@/lib/screener/harmonic-screener";
 import type {
+  HarmonicMatch,
   HarmonicPattern,
   HarmonicTimeframe,
 } from "@/lib/quant/harmonic";
@@ -50,6 +52,15 @@ function scoreTone(score: number): string {
   if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
   if (score >= 60) return "text-indigo-600 dark:text-indigo-300";
   return "text-slate-500 dark:text-slate-400";
+}
+
+function wfTone(
+  verdict: "stable" | "improved" | "decayed" | "insufficient"
+): string {
+  if (verdict === "stable") return "text-emerald-600 dark:text-emerald-400";
+  if (verdict === "improved") return "text-indigo-600 dark:text-indigo-300";
+  if (verdict === "decayed") return "text-rose-600 dark:text-rose-400";
+  return "text-slate-400";
 }
 
 export default function HarmonicPage() {
@@ -111,24 +122,53 @@ export default function HarmonicPage() {
       .finally(() => setStatsLoading(false));
   }, []);
 
+  const timeframeCounts = useMemo(() => {
+    const counts: Record<HarmonicTimeframe, number> = {
+      "4H": 0,
+      "1D": 0,
+      "1W": 0,
+      "1M": 0,
+    };
+    const seen = new Set<string>();
+    for (const candidate of scan?.results ?? []) {
+      for (const match of candidate.matches) {
+        const key = `${candidate.symbol}|${match.timeframe}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        counts[match.timeframe] += 1;
+      }
+    }
+    return counts;
+  }, [scan]);
+
   const results = useMemo(() => {
     const list = scan?.results ?? [];
     const needle = query.trim().toUpperCase();
-    return list.filter((candidate) => {
-      if (watchlistOnly && !watchlist.includes(candidate.symbol)) return false;
-      if (pattern !== "all" && candidate.best.pattern !== pattern) return false;
-      if (timeframe !== "all" && !candidate.timeframes.includes(timeframe)) {
-        return false;
-      }
+    const rows = list.flatMap((candidate) => {
+      const match =
+        timeframe === "all"
+          ? candidate.best
+          : candidate.matches
+              .filter((item) => item.timeframe === timeframe)
+              .sort((left, right) => right.score - left.score)[0];
+      if (!match) return [];
+      if (watchlistOnly && !watchlist.includes(candidate.symbol)) return [];
+      if (pattern !== "all" && match.pattern !== pattern) return [];
       if (
         needle &&
         !candidate.symbol.includes(needle) &&
         !(getCompanyName(candidate.symbol) ?? "").toUpperCase().includes(needle)
       ) {
-        return false;
+        return [];
       }
-      return true;
+      return [{ candidate, match }];
     });
+    return rows.sort(
+      (left, right) =>
+        right.match.score - left.match.score ||
+        right.candidate.confluenceCount - left.candidate.confluenceCount ||
+        Math.abs(left.match.distancePct) - Math.abs(right.match.distancePct)
+    );
   }, [scan, pattern, timeframe, watchlistOnly, watchlist, query]);
 
   return (
@@ -152,9 +192,17 @@ export default function HarmonicPage() {
                   {scan.scanned}/{scan.universeSize} emiten
                 </span>
               )}
+              <Link
+                href="/harmonic/knowledge"
+                className="inline-flex items-center gap-1 rounded-full border border-indigo-500/20 bg-indigo-500/5 px-2 py-0.5 font-mono text-[10px] text-indigo-700 transition hover:bg-indigo-500/10 dark:text-indigo-300"
+              >
+                <BookOpen className="h-3 w-3" />
+                Knowledge
+              </Link>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Gartley, Bat, Butterfly, Crab pada 4H, 1D, 1W, dan 1M.
+              Gartley, Bat, Butterfly, Crab, Shark, Cypher pada 4H, 1D, 1W, dan
+              1M. Filter 1D untuk swing harian, 1W untuk swing mingguan.
               Data Yahoo dapat tertunda.
             </p>
           </div>
@@ -169,6 +217,13 @@ export default function HarmonicPage() {
                 className="h-9 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 font-mono text-xs text-zinc-900 outline-none focus:border-slate-400 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100"
               />
             </div>
+            <Link
+              href="/harmonic/knowledge"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:text-zinc-950 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:text-white"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Knowledge
+            </Link>
             <button
               type="button"
               onClick={() => void load(true)}
@@ -207,7 +262,9 @@ export default function HarmonicPage() {
           >
             {TIMEFRAMES.map((item) => (
               <option key={item} value={item}>
-                {item === "all" ? "Semua TF" : item}
+                {item === "all"
+                  ? `Semua TF (${scan?.results.length ?? 0})`
+                  : `${item} · ${timeframeCounts[item]}`}
               </option>
             ))}
           </select>
@@ -256,8 +313,8 @@ export default function HarmonicPage() {
               </h2>
               <p className="mt-0.5 text-[10px] text-slate-400">
                 {stats
-                  ? `${stats.patterns} pola · ${stats.symbols} emiten · ${stats.timeframes.join("/")} · 5 tahun`
-                  : "Sampel 1D dari 24 emiten likuid"}
+                  ? `${stats.patterns} pola · ${stats.symbols} emiten · ${stats.timeframes.join("/")} · WF ${stats.walkForwardSplitPct}/${100 - stats.walkForwardSplitPct} · fee ${stats.feePct}%`
+                  : "Sampel 88 emiten likuid · 4H/1D/1W/1M"}
               </p>
             </div>
             {statsLoading && (
@@ -277,12 +334,14 @@ export default function HarmonicPage() {
                     <th className="px-2 py-2 text-right font-normal">T1</th>
                     <th className="px-2 py-2 text-right font-normal">T2</th>
                     <th className="px-2 py-2 text-right font-normal">Invalid</th>
+                    <th className="px-2 py-2 text-right font-normal">WF T1</th>
+                    <th className="px-2 py-2 text-right font-normal">Net T1</th>
                     <th className="px-4 py-2 text-right font-normal">Hari ke T1</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
                   {stats.stats.map((row) => (
-                    <tr key={`${row.pattern}-${row.direction}`}>
+                    <tr key={`${row.pattern}-${row.direction}-${row.timeframe}`}>
                       <td className="px-4 py-2 font-mono text-zinc-800 dark:text-zinc-200">
                         {row.pattern}
                         <span className="ml-1 text-[9px] text-slate-400">
@@ -301,6 +360,27 @@ export default function HarmonicPage() {
                       <td className="px-2 py-2 text-right font-mono text-rose-600 dark:text-rose-400">
                         {row.total ? ((row.invalidated / row.total) * 100).toFixed(1) : "0.0"}%
                       </td>
+                      <td
+                        className={`px-2 py-2 text-right font-mono ${wfTone(row.walkForwardVerdict)}`}
+                        title={`${row.firstHalf.total} sampel paruh 1 vs ${row.secondHalf.total} sampel paruh 2`}
+                      >
+                        {row.firstHalf.total >= 5 && row.secondHalf.total >= 5
+                          ? `${row.firstHalf.t1RatePct.toFixed(0)}% → ${row.secondHalf.t1RatePct.toFixed(0)}%`
+                          : "—"}
+                      </td>
+                      <td
+                        className={`px-2 py-2 text-right font-mono ${
+                          row.netAvgT1Pct === null
+                            ? "text-slate-400"
+                            : row.netAvgT1Pct >= 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                        }`}
+                      >
+                        {row.netAvgT1Pct === null
+                          ? "—"
+                          : `${row.netAvgT1Pct >= 0 ? "+" : ""}${row.netAvgT1Pct.toFixed(1)}%`}
+                      </td>
                       <td className="px-4 py-2 text-right font-mono text-slate-500 dark:text-slate-400">
                         {row.avgDaysToT1 === null ? "—" : row.avgDaysToT1.toFixed(0)}
                       </td>
@@ -314,6 +394,13 @@ export default function HarmonicPage() {
               Statistik belum tersedia.
             </p>
           ) : null}
+          {stats && stats.stats.length > 0 && (
+            <p className="border-t border-slate-100 px-4 py-2 text-[10px] leading-relaxed text-slate-500 dark:border-white/[0.06] dark:text-slate-400">
+              WF T1 = T1 rate paruh pertama → paruh kedua (minimal 5 sampel per
+              paruh). Net T1 = target T1 rata-rata setelah fee round-trip; bukan
+              expectancy dan belum menghitung slippage.
+            </p>
+          )}
         </section>
 
         {loading ? (
@@ -344,8 +431,12 @@ export default function HarmonicPage() {
               <span className="text-right">Skor</span>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-              {results.map((candidate) => (
-                <HarmonicRow key={candidate.symbol} candidate={candidate} />
+              {results.map(({ candidate, match }) => (
+                <HarmonicRow
+                  key={`${candidate.symbol}-${match.timeframe}-${match.pattern}`}
+                  candidate={candidate}
+                  match={match}
+                />
               ))}
             </div>
           </div>
@@ -360,21 +451,26 @@ export default function HarmonicPage() {
   );
 }
 
-function HarmonicRow({ candidate }: { candidate: HarmonicCandidate }) {
-  const best = candidate.best;
+function HarmonicRow({
+  candidate,
+  match,
+}: {
+  candidate: HarmonicCandidate;
+  match: HarmonicMatch;
+}) {
   const name = getCompanyName(candidate.symbol) ?? candidate.symbol;
   const href = `/chart?symbol=${encodeURIComponent(candidate.symbol)}&tf=${chartTimeframe(
-    best.timeframe
-  )}&htf=${best.timeframe}`;
+    match.timeframe
+  )}&htf=${match.timeframe}`;
 
   return (
     <LinkRow
       href={href}
       symbol={candidate.symbol}
       name={name}
-      best={best}
+      best={match}
       confluence={candidate.timeframes}
-      score={candidate.score}
+      score={match.score}
     />
   );
 }

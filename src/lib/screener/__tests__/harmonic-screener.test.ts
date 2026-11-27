@@ -145,7 +145,7 @@ describe("scanHarmonicUniverse", () => {
     expect(result.limitations.join(" ")).toContain("gagal");
   });
 
-  it("keeps only the top five candidates", async () => {
+  it("keeps all candidates instead of a top-five cap", async () => {
     const result = await scanHarmonicUniverse({
       symbols: ["TOP10", "TOP20", "TOP30", "TOP40", "TOP50", "TOP60", "TOP70"],
       refresh: true,
@@ -154,14 +154,17 @@ describe("scanHarmonicUniverse", () => {
       detect: fakeDetect,
       now: () => new Date("2026-01-05T01:00:00.000Z"),
     });
-    expect(result.results).toHaveLength(5);
+    expect(result.results).toHaveLength(7);
     expect(result.results.map((candidate) => candidate.symbol)).toEqual([
       "TOP70",
       "TOP60",
       "TOP50",
       "TOP40",
       "TOP30",
+      "TOP20",
+      "TOP10",
     ]);
+    expect(result.results[0].matches[0].timeframe).toBe("1D");
   });
 });
 
@@ -169,6 +172,7 @@ describe("harmonic cache", () => {
   it("round-trips and respects the max age", () => {
     const file = tempCachePath();
     const result: HarmonicScanResult = {
+      version: 2,
       generatedAt: "2026-01-05T00:00:00.000Z",
       date: "2026-01-05",
       universeSize: 1,

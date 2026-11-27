@@ -1,14 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Filter, Loader2, RefreshCw, Search } from "lucide-react";
+import { Bookmark, Filter, Loader2, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { getCompanyName } from "@/lib/sectors/companies";
 import { LIQUID_IDX_UNIVERSE } from "@/lib/screener/universe";
+import {
+  loadPresets,
+  removePreset,
+  savePreset,
+  type ScreenerPreset,
+} from "@/lib/screener/presets";
 import type { MarketMetricItem } from "@/lib/screener/market-metrics";
 
-const SYMBOLS = LIQUID_IDX_UNIVERSE.slice(0, 25);
+const SYMBOLS = LIQUID_IDX_UNIVERSE;
 
 function formatNumber(value: number | null, digits = 1): string {
   if (value === null || !Number.isFinite(value)) return "—";
@@ -25,21 +31,47 @@ export default function ScreenerPage() {
   const [maxPb, setMaxPb] = useState("");
   const [minRsi, setMinRsi] = useState("");
   const [trend, setTrend] = useState("all");
+  const [presets, setPresets] = useState<ScreenerPreset[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [activePreset, setActivePreset] = useState("");
+  const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
+  const [fallback, setFallback] = useState(false);
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
+      const snapshotResponse = await fetch("/api/screener/snapshot", {
+        cache: "no-store",
+      });
+      const snapshot = await snapshotResponse.json();
+      if (
+        snapshot.success &&
+        Array.isArray(snapshot.items) &&
+        snapshot.items.length > 0
+      ) {
+        setItems(snapshot.items as MarketMetricItem[]);
+        setSnapshotAt(snapshot.generatedAt ?? null);
+        setFallback(false);
+        return;
+      }
+
+      const fallbackSymbols = SYMBOLS.slice(0, 20);
       const response = await fetch("/api/watchlist-metrics", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ symbols: SYMBOLS }),
+        body: JSON.stringify({
+          symbols: fallbackSymbols,
+          includeFlow: false,
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Gagal memuat screener.");
       }
       setItems(data.items as MarketMetricItem[]);
+      setSnapshotAt(null);
+      setFallback(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat screener.");
     } finally {
@@ -49,7 +81,37 @@ export default function ScreenerPage() {
 
   useEffect(() => {
     void load();
+    setPresets(loadPresets());
   }, []);
+
+  const applyPreset = (id: string) => {
+    setActivePreset(id);
+    const preset = presets.find((item) => item.id === id);
+    if (!preset) return;
+    setSector(preset.sector);
+    setMaxPe(preset.maxPe);
+    setMaxPb(preset.maxPb);
+    setMinRsi(preset.minRsi);
+    setTrend(preset.trend);
+  };
+
+  const persistPreset = () => {
+    const name = presetName.trim();
+    if (!name) return;
+    const next = savePreset({ name, sector, maxPe, maxPb, minRsi, trend });
+    setPresets(next);
+    setPresetName("");
+    const saved = next.find(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+    setActivePreset(saved?.id ?? "");
+  };
+
+  const deleteActivePreset = () => {
+    if (!activePreset) return;
+    setPresets(removePreset(activePreset));
+    setActivePreset("");
+  };
 
   const sectors = useMemo(
     () => [...new Set(items.map((item) => item.sector).filter(Boolean))].sort(),
@@ -90,7 +152,9 @@ export default function ScreenerPage() {
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Filter valuasi, RSI, tren, dan foreign flow. Muat pertama bisa 20–40 detik, berikutnya cache 10 menit.
+              Filter valuasi, RSI, tren, dan foreign flow untuk 88 emiten likuid.
+              Snapshot diperbarui harian oleh cron; fallback 20 emiten jika
+              snapshot belum siap.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -113,6 +177,53 @@ export default function ScreenerPage() {
               Muat ulang
             </button>
           </div>
+        </div>
+
+        {fallback && (
+          <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+            Snapshot 88 emiten belum siap. Menampilkan 20 emiten likuid tanpa
+            flow. Cron akan membangun snapshot lengkap pada jadwal berikutnya.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c]">
+          <Bookmark className="h-3.5 w-3.5 text-slate-400" />
+          <select
+            value={activePreset}
+            onChange={(event) => applyPreset(event.target.value)}
+            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-zinc-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
+            aria-label="Preset screener"
+          >
+            <option value="">Preset tersimpan</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+          <input
+            value={presetName}
+            onChange={(event) => setPresetName(event.target.value)}
+            placeholder="Nama preset"
+            className="h-8 w-36 rounded-md border border-slate-200 bg-white px-2 font-mono text-[11px] text-zinc-700 outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
+          />
+          <button
+            type="button"
+            onClick={persistPreset}
+            disabled={!presetName.trim()}
+            className="h-8 rounded-md bg-zinc-900 px-3 text-[11px] font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          >
+            Simpan
+          </button>
+          <button
+            type="button"
+            onClick={deleteActivePreset}
+            disabled={!activePreset}
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 px-2 text-[11px] text-slate-500 transition hover:text-rose-600 disabled:opacity-40 dark:border-white/10 dark:text-slate-400"
+          >
+            <Trash2 className="h-3 w-3" />
+            Hapus
+          </button>
         </div>
 
         <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c] sm:grid-cols-2 lg:grid-cols-6">
@@ -167,7 +278,7 @@ export default function ScreenerPage() {
         {loading ? (
           <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-500 dark:border-white/10 dark:bg-[#0b0b0c] dark:text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
-            Memuat metrik 25 emiten...
+            Memuat snapshot screener...
           </div>
         ) : error ? (
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 text-center text-sm text-rose-600 dark:text-rose-300">
@@ -221,7 +332,7 @@ export default function ScreenerPage() {
           </div>
         )}
         <p className="text-[10px] text-slate-500 dark:text-slate-400">
-          Sampel 25 emiten likuid, bukan seluruh bursa. Bukan rekomendasi.
+          Sampel 88 emiten likuid, bukan seluruh bursa. Bukan rekomendasi.
         </p>
       </main>
     </div>

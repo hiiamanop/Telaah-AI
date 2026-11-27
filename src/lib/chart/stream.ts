@@ -51,6 +51,21 @@ const REFRESH_MS = Math.max(
   Number(process.env.CHART_STREAM_REFRESH_MS) || 5_000
 );
 const BURST_MS = 30_000;
+const REFRESH_MS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
+  "1D": REFRESH_MS,
+  "1W": 15_000,
+  "1Y": 60_000,
+  "5Y": 5 * 60_000,
+};
+
+function refreshIntervalFor(timeframe: ChartTimeframe): number {
+  if (idxMarketState().label === "Istirahat") return BURST_MS;
+  return REFRESH_MS_BY_TIMEFRAME[timeframe] ?? REFRESH_MS;
+}
+
+function timeframeFromKey(key: string): ChartTimeframe {
+  return key.split(":")[1] as ChartTimeframe;
+}
 
 function keyOf(symbol: string, timeframe: ChartTimeframe): string {
   return `${symbol}:${timeframe}`;
@@ -152,8 +167,7 @@ async function refreshChart(
 
 function shouldRefresh(key: string, now: number): boolean {
   const last = hub.lastRefresh.get(key) ?? 0;
-  const interval = idxMarketState().label === "Istirahat" ? BURST_MS : REFRESH_MS;
-  return now - last >= interval;
+  return now - last >= refreshIntervalFor(timeframeFromKey(key));
 }
 
 function stopLoop(): void {
@@ -193,8 +207,7 @@ export async function getChartSnapshot(
   const cached = await readChartCache(symbol, timeframe);
   if (cached) {
     const cachedAt = Date.parse(cached.fetchedAt);
-    const interval =
-      idxMarketState().label === "Istirahat" ? BURST_MS : REFRESH_MS;
+    const interval = refreshIntervalFor(timeframe);
     if (Number.isFinite(cachedAt) && Date.now() - cachedAt < interval) {
       const frame = frameFor(cached);
       hub.latest.set(key, frame);

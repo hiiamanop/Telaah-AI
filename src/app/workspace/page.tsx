@@ -29,8 +29,6 @@ import {
 import type { HarmonicScanResult } from "@/lib/screener/harmonic-screener";
 import type { MarketMetricItem } from "@/lib/screener/market-metrics";
 
-const POPULAR = ["BBCA", "BBRI", "BMRI", "TLKM", "ASII", "ADRO"];
-
 function formatPrice(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "—";
   return value.toLocaleString("id-ID", { maximumFractionDigits: 0 });
@@ -66,6 +64,7 @@ export default function WorkspacePage() {
     Record<string, MarketMetricItem>
   >({});
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
+  const [watchlistLoaded, setWatchlistLoaded] = useState(false);
 
   const { frame, status } = useChartStream(symbol, "1Y", hydrated);
   const current = frame?.symbol === symbol ? frame : null;
@@ -130,8 +129,13 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (!hydrated) return;
     const saved = getWatchlistSymbols();
-    const targets = (saved.length > 0 ? saved : POPULAR).slice(0, 6);
+    const targets = saved.slice(0, 6);
     setWatchlistSymbols(targets);
+    setWatchlistLoaded(true);
+    if (targets.length === 0) {
+      setWatchlistMetrics({});
+      return;
+    }
     let cancelled = false;
     fetch("/api/watchlist-metrics", {
       method: "POST",
@@ -336,6 +340,7 @@ export default function WorkspacePage() {
                   <WatchlistPanel
                     symbols={watchlistSymbols}
                     metrics={watchlistMetrics}
+                    loaded={watchlistLoaded}
                     onSelect={setSymbol}
                   />
                 )}
@@ -444,14 +449,21 @@ function HarmonicPanel({
 function WatchlistPanel({
   symbols,
   metrics,
+  loaded,
   onSelect,
 }: {
   symbols: string[];
   metrics: Record<string, MarketMetricItem>;
+  loaded: boolean;
   onSelect: (symbol: string) => void;
 }) {
-  if (symbols.length === 0) {
+  if (!loaded) {
     return <PanelLoading label="memuat watchlist..." />;
+  }
+  if (symbols.length === 0) {
+    return (
+      <PanelEmpty label="Belum ada emiten di watchlist. Tambahkan dari halaman Watchlist." />
+    );
   }
   return (
     <div className="space-y-1">

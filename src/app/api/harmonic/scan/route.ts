@@ -13,13 +13,6 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
-  const limited = await guardRateLimit(
-    req,
-    "harmonicScan",
-    RATE_LIMIT_RULES.harmonicScan
-  );
-  if (limited) return limited;
-
   const { searchParams } = new URL(req.url);
   const refresh = searchParams.get("refresh") === "1";
   const rawDirection = searchParams.get("direction");
@@ -42,6 +35,16 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: true, cached: true, ...cached });
       }
     }
+
+    // Cached reads are cheap and must stay available. Only an actual scan
+    // (cache miss or explicit refresh) consumes the scan rate limit.
+    const limited = await guardRateLimit(
+      req,
+      "harmonicScan",
+      RATE_LIMIT_RULES.harmonicScan
+    );
+    if (limited) return limited;
+
     const result = await scanHarmonicUniverse({
       refresh,
       direction,

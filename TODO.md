@@ -82,3 +82,4 @@
 - [ ] Add licensed exchange tick/order-book feed <!-- id=80 priority=medium created=2026-11-27 -->
 - [x] Add HBA coal benchmark to Macro & markets <!-- id=81 priority=medium done=2026-11-27 created=2026-11-27 -->
 - [x] Fix harmonic 429, nav order, and empty workspace watchlist <!-- id=82 priority=high done=2026-11-27 created=2026-11-27 -->
+- [x] Repair main after fork merge and run smoke tests <!-- id=83 priority=high done=2026-11-27 created=2026-11-27 -->

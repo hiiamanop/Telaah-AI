@@ -204,11 +204,19 @@ export default function Home() {
                 : null,
           }));
           const requestedId = new URLSearchParams(window.location.search).get("session");
-          const selected = sanitized.find((session) => session.id === requestedId) || sanitized[0];
-          setSessions(sanitized);
+          const selected = (requestedId && parsed.find((session: ChatSession) => session.id === requestedId)) || parsed[0];
+          setSessions(parsed);
           setActiveSessionId(selected.id);
           setMessages(selected.messages || []);
           if (selected.report) setReport(selected.report);
+          if (typeof window !== "undefined") {
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.get("session") !== selected.id && !currentUrl.searchParams.has("symbol")) {
+              currentUrl.searchParams.set("session", selected.id);
+              currentUrl.searchParams.delete("newChat");
+              window.history.replaceState(null, "", currentUrl.toString());
+            }
+          }
           return;
         }
       }
@@ -285,7 +293,23 @@ export default function Home() {
     try {
       localStorage.setItem("telaah_chat_sessions", JSON.stringify(updatedSessions));
       window.dispatchEvent(new Event("telaah:sessions"));
-    } catch (e) {}
+    } catch (e: any) {
+      try {
+        const sanitized = updatedSessions.slice(0, 10).map((s) => ({
+          ...s,
+          messages: s.messages.map((m) => {
+            if (m.images && m.images.length > 0) {
+              return { ...m, images: m.images.slice(0, 1) };
+            }
+            return m;
+          }),
+        }));
+        localStorage.setItem("telaah_chat_sessions", JSON.stringify(sanitized));
+        window.dispatchEvent(new Event("telaah:sessions"));
+      } catch (err2) {
+        console.warn("Storage quota limit reached:", err2);
+      }
+    }
   };
 
   const handleNewChat = () => {
@@ -303,6 +327,12 @@ export default function Home() {
     setMessages([]);
     setReport(null); // Reset konteks emiten global
     setViewMode("chat");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("session", newSessionId);
+      url.searchParams.delete("newChat");
+      window.history.replaceState(null, "", url.toString());
+    }
   };
 
   const handleSelectSession = (sessionId: string) => {
@@ -316,6 +346,12 @@ export default function Home() {
           : null
       );
       setViewMode("chat"); // Pastikan selalu kembali ke tampilan history chat utama
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("session", session.id);
+        url.searchParams.delete("newChat");
+        window.history.replaceState(null, "", url.toString());
+      }
     }
   };
 
@@ -440,6 +476,7 @@ export default function Home() {
 
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
+    updateActiveSession(newMessages, report);
 
     // 1. Check if user asked to open Kamus or Jargon Buster
     if (/kamus|istilah|jargon/i.test(userText)) {
@@ -505,10 +542,25 @@ export default function Home() {
       } catch (e) {}
     }
 
+    // 3b. If user provided image(s), ALWAYS run executeAnalysis so Vision can inspect the image,
+    // detect its ticker (e.g. ANII, BBCA) or extract the visual chart/table data, and synthesize with reasoning model!
+    if (images && images.length > 0) {
+      await executeAnalysis(userText, mode, undefined, newMessages, images);
+      return;
+    }
+
     // 4. Check if user introduced a NEW stock ticker to switch focus
     const newTarget = detectNewTargetSymbol(userText, report?.symbol);
-    if (newTarget) {
-      await executeAnalysis(userText, mode, newTarget, newMessages);
+    const mentionsActiveStock = report?.symbol && userText.toUpperCase().includes(report.symbol);
+    const isExplicitSwitch =
+      newTarget &&
+      (!report ||
+       !mentionsActiveStock ||
+       userText.trim().toUpperCase() === newTarget ||
+       /(?:analisis|telaah|buka|bedah|ganti|pindah|fokus|pilih|cek emiten)\s+/i.test(userText));
+
+    if (newTarget && isExplicitSwitch) {
+      await executeAnalysis(userText, mode, newTarget, newMessages, images);
       return;
     }
 
@@ -524,10 +576,15 @@ export default function Home() {
       setLoadingStage(`Menjawab pertanyaan berbasis data ${activeReport.symbol}...`);
 
       try {
+        const historyPayload = messages.slice(-6).map((m) => ({
+          role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+          text: m.text,
+        }));
+
         const qaRes = await fetch("/api/qa", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userText, report: activeReport }),
+          body: JSON.stringify({ question: userText, report, history: historyPayload, images }),
         });
         const qaData = await qaRes.json();
 
@@ -552,7 +609,9 @@ export default function Home() {
           text: `Kendala: ${err.message || "Gagal memproses pertanyaan"}.`,
           timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
         };
-        setMessages([...newMessages, botReply]);
+        const finalMsgs = [...newMessages, botReply];
+        setMessages(finalMsgs);
+        updateActiveSession(finalMsgs, report);
       } finally {
         setIsLoading(false);
         setLoadingStage("");
@@ -561,7 +620,7 @@ export default function Home() {
     }
 
     // Otherwise run full or quick analysis
-    await executeAnalysis(userText, mode, undefined, newMessages);
+    await executeAnalysis(userText, mode, undefined, newMessages, images);
   };
 
   const updateActiveSession = (updatedMessages: ChatMessage[], newReport?: CompanyIntelligenceReport | null) => {
@@ -593,13 +652,23 @@ export default function Home() {
     }
 
     persistSessions(currentList);
+
+    if (typeof window !== "undefined" && currentId) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("session") !== currentId) {
+        url.searchParams.set("session", currentId);
+        url.searchParams.delete("newChat");
+        window.history.replaceState(null, "", url.toString());
+      }
+    }
   };
 
   const executeAnalysis = async (
     prompt: string,
     mode: AnalysisMode,
     confirmedSymbol?: string,
-    existingMessages?: ChatMessage[]
+    existingMessages?: ChatMessage[],
+    images?: string[]
   ) => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -613,13 +682,15 @@ export default function Home() {
         id: "u_" + Date.now(),
         sender: "user",
         text: prompt,
+        images,
         timestamp: timeStr,
       };
       baseMessages = [...messages, userMsg];
       setMessages(baseMessages);
+      updateActiveSession(baseMessages, report);
     }
 
-    setLoadingStage("Menganalisis intensi & mengekstrak data emiten...");
+    setLoadingStage(images && images.length > 0 ? "Membaca data visual & memverifikasi berita..." : "Menganalisis intensi & mengekstrak data emiten...");
 
     try {
       const res = await fetch("/api/analyze", {
@@ -629,6 +700,7 @@ export default function Home() {
           prompt,
           mode,
           confirmedSymbol,
+          images,
         }),
       });
 
@@ -638,15 +710,14 @@ export default function Home() {
         throw new Error(data.error || "Gagal melakukan telaah emiten.");
       }
 
-      if (data.assistantMessage) {
+      // If backend returned a conversational reply (e.g. general question or image discussion without ticker)
+      if (data.conversationalReply) {
+        const timeStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
         const botReply: ChatMessage = {
           id: "b_" + Date.now(),
           sender: "assistant",
-          text: data.assistantMessage,
-          timestamp: new Date().toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          text: data.conversationalReply,
+          timestamp: timeStr,
         };
         const finalMsgs = [...baseMessages, botReply];
         setMessages(finalMsgs);
@@ -659,6 +730,15 @@ export default function Home() {
         setCandidateSymbol(data.candidateSymbol || "");
         setPendingPrompt(prompt);
         setPendingMode(mode);
+        const botReply: ChatMessage = {
+          id: "b_" + Date.now(),
+          sender: "assistant",
+          text: data.message || "Mohon sebutkan kode saham IDX 4 huruf (misal: BBCA, TLKM) untuk membedah data resmi bursa.",
+          timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+        };
+        const finalMsgs = [...baseMessages, botReply];
+        setMessages(finalMsgs);
+        updateActiveSession(finalMsgs, report);
         setIsLoading(false);
         return;
       }
@@ -727,6 +807,15 @@ export default function Home() {
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Terjadi kesalahan saat memproses data.");
+      const botReply: ChatMessage = {
+        id: "b_" + Date.now(),
+        sender: "assistant",
+        text: `Kendala: ${err.message || "Terjadi kesalahan saat memproses data."}`,
+        timestamp: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+      };
+      const finalMsgs = [...baseMessages, botReply];
+      setMessages(finalMsgs);
+      updateActiveSession(finalMsgs, report);
     } finally {
       setIsLoading(false);
       setLoadingStage("");
@@ -1189,12 +1278,12 @@ export default function Home() {
             {/* Copilot Header */}
             <div className="px-3.5 py-2.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between gap-2 bg-white dark:bg-black">
               <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-zinc-200" />
-                <span className="font-mono text-xs font-bold text-slate-100 uppercase tracking-wider">
+                <Bot className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />
+                <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
                   RESEARCH COPILOT
                 </span>
                 {report && (
-                  <span className="px-1.5 py-0.2 rounded bg-zinc-500/10 text-[10px] font-mono font-bold text-zinc-200 border border-zinc-500/30">
+                  <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-500/10 text-[10px] font-mono font-bold text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-500/30">
                     {report.symbol}
                   </span>
                 )}

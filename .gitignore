@@ -35,8 +35,9 @@ next.log
 next-env.d.ts
 dev.log
 
-# qdrant persistent storage
+# qdrant and redis persistent storage
 data/qdrant_storage/
+data/redis_storage/
 
 
 # runtime caches and local bot state

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runAnalysis } from "@/lib/agent/analysis-service";
-import { marketDataErrorMessage } from "@/lib/market/errors";
-import { guardRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rate-limit";
+import { SectorsClient } from "@/lib/sectors/client";
+import { classifyInputAndExtractClaims } from "@/lib/agent/classifier";
+import { executeEvidencePlan } from "@/lib/agent/coordinator";
+import { synthesizeIntelligenceReport } from "@/lib/agent/synthesizer";
+import { callOpenRouter } from "@/lib/agent/openrouter";
+import { extractVisionDataWithClaude } from "@/lib/agent/vision";
+import { AnalysisMode } from "@/lib/agent/types";
+import { sectorsErrorMessage } from "@/lib/sectors/errors";
+import {
+  searchSemanticReportCache,
+  upsertReportToVectorCache,
+  getTodayWIB,
+} from "@/lib/vector/qdrant";
 
 export async function POST(req: NextRequest) {
   const limited = await guardRateLimit(req, "analyze", RATE_LIMIT_RULES.analyze);
@@ -9,25 +19,85 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const result = await runAnalysis({
-      prompt: body.prompt,
-      mode: body.mode,
-      confirmedSymbol: body.confirmedSymbol,
-    });
+    const prompt = body.prompt?.trim();
+    const mode: AnalysisMode = body.mode === "quick" ? "quick" : "full";
+    let confirmedSymbol = body.confirmedSymbol?.trim()?.toUpperCase()?.replace(".JK", "");
+    const images: string[] = Array.isArray(body.images) ? body.images : [];
 
-    if (result.type === "error") {
-      return NextResponse.json({ error: result.message }, { status: result.status });
+    if (!prompt && images.length === 0) {
+      return NextResponse.json(
+        { error: "Prompt atau gambar analisis tidak boleh kosong." },
+        { status: 400 }
+      );
     }
 
-    if (result.type === "message") {
-      return NextResponse.json({
-        success: true,
-        assistantMessage: result.message,
-        conversation: true,
-      });
+    // Step 0: Stage 1 Pipeline (Vision Extraction with Multimodal Claude 3.7 Sonnet)
+    let visionContext = "";
+    if (images.length > 0) {
+      const visionResult = await extractVisionDataWithClaude(images, prompt);
+      if (visionResult.detectedTicker && !confirmedSymbol) {
+        confirmedSymbol = visionResult.detectedTicker;
+      }
+      visionContext = `[Temuan Visual Gambar (${visionResult.imageType})]:\n${visionResult.summary}\n${visionResult.extractedData}\n\n`;
     }
 
-    if (result.type === "confirmation") {
+    const effectivePrompt = `${visionContext}${prompt || "Analisis data dari gambar terlampir."}`.trim();
+
+    // Fast-path: Check semantic cache if confirmedSymbol is passed
+    if (confirmedSymbol && /^[A-Z]{4}$/.test(confirmedSymbol)) {
+      const cacheCheck = await searchSemanticReportCache(prompt, confirmedSymbol, 0.88, mode);
+      if (cacheCheck.isMatch && cacheCheck.isFresh && cacheCheck.payload?.report) {
+        return NextResponse.json({
+          success: true,
+          report: {
+            ...cacheCheck.payload.report,
+            fromVectorCache: true,
+            cacheScore: Number(cacheCheck.score.toFixed(3)),
+            cacheDate: cacheCheck.payload.capturedDate,
+          },
+        });
+      }
+    }
+
+    // Step 1: Input Classification & Claim Extraction
+    // Fast-path: Jika confirmedSymbol sudah valid dan prompt hanya berupa lookup emiten standar, bypass LLM classifier
+    let classification: any;
+    const isDirectLookup = confirmedSymbol && /^[A-Z]{4}$/.test(confirmedSymbol) && 
+      (prompt.includes("Analisis komprehensif emiten") || prompt.trim() === confirmedSymbol);
+
+    if (isDirectLookup) {
+      classification = {
+        symbol: confirmedSymbol,
+        intent: "company_overview",
+        isAmbiguous: false,
+        claims: [],
+        explanation: `Direct lookup for ${confirmedSymbol}`,
+      };
+    } else {
+      classification = await classifyInputAndExtractClaims(effectivePrompt);
+    }
+
+    const targetSymbol = confirmedSymbol || classification.symbol;
+
+    if (!targetSymbol || !/^[A-Z]{4}$/.test(targetSymbol)) {
+      // Fallback Stage 2: Qwen Conversational Answer if no IDX stock ticker identified
+      if (process.env.OPENROUTER_API_KEY) {
+        const conversationalReply = await callOpenRouter<string>({
+          systemPrompt: `Anda adalah Asisten Riset Kuantitatif Pasar Modal Indonesia (IDX).
+Jawab pertanyaan pengguna atau bahas temuan dari gambar/grafik/tabel yang dilampirkan dengan ramah, profesional, analitis, dan berbasis edukasi investasi yang objektif.
+Jika gambar menunjukkan grafik teknikal, broker summary, atau laporan keuangan tanpa kode ticker yang jelas, jelaskan pola data yang terlihat dan tawarkan pengguna untuk menyebutkan kode sahamnya agar data resmi bursa dapat ditarik.
+DILARANG memberikan rekomendasi beli/jual ilegal (selalu sertakan disclaimer edukasi).`,
+          userPrompt: `Pertanyaan Pengguna: "${prompt || "Tolong analisis gambar ini."}"\n\n${visionContext ? visionContext : ""}`,
+          responseFormat: "text",
+          temperature: 0.3,
+        });
+
+        return NextResponse.json({
+          success: true,
+          conversationalReply,
+        });
+      }
+
       return NextResponse.json(
         {
           needsConfirmation: true,
@@ -39,7 +109,76 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, report: result.report });
+    // Step 1b: Semantic Vector Cache Check with targetSymbol
+    try {
+      const cacheHit = await searchSemanticReportCache(prompt, targetSymbol, 0.88, mode);
+      if (cacheHit.isMatch && cacheHit.isFresh && cacheHit.payload?.report) {
+        return NextResponse.json({
+          success: true,
+          report: {
+            ...cacheHit.payload.report,
+            fromVectorCache: true,
+            cacheScore: Number(cacheHit.score.toFixed(3)),
+            cacheDate: cacheHit.payload.capturedDate,
+          },
+        });
+      }
+    } catch (e) {
+      // ignore cache check errors
+    }
+
+    // Step 2: Coordinator & Evidence Collection (Cache Miss / Stale Day)
+    const sectorsClient = new SectorsClient();
+    let evidence;
+    try {
+      evidence = await executeEvidencePlan(
+        sectorsClient,
+        targetSymbol,
+        mode,
+        classification.intent,
+        classification.claims
+      );
+    } catch (coordErr: any) {
+      // Graceful AI Fallback: If Sectors API key quota is exhausted or plan restricted,
+      // fallback to Qwen 3.5 to answer the question directly with financial intelligence
+      if (process.env.OPENROUTER_API_KEY) {
+        console.warn(`Sectors API restricted for ${targetSymbol} (${coordErr.message}). Falling back to reasoning AI.`);
+        const conversationalReply = await callOpenRouter<string>({
+          systemPrompt: `Anda adalah Telaah-AI, asisten riset pasar modal Bursa Efek Indonesia (IDX) yang cerdas, objektif, dan berbasis data.
+Tugas Anda: Memberikan analisis riset pasar modal mendalam untuk pertanyaan pengguna mengenai saham ${targetSymbol}.
+BAHAS DENGAN MENDALAM:
+1. Profil dan bisnis inti emiten ${targetSymbol}.
+2. Karakteristik pergerakan harga, sektor industri, dan faktor fundamental/teknikal yang relevan.
+3. Rencana eksekusi/pertimbangan entry (area support, batas cut loss disiplin, dan rasio risk-to-reward).
+4. Catatan: Sampaikan bahwa ringkasan ini adalah telaah riset AI independen untuk membantu pertimbangan pengguna tanpa rekomendasi spekulatif ilegal.`,
+          userPrompt: `Pertanyaan Pengguna: "${prompt}"\n\n${visionContext ? visionContext : ""}`,
+          responseFormat: "text",
+          temperature: 0.3,
+        });
+
+        return NextResponse.json({
+          success: true,
+          conversationalReply,
+        });
+      }
+      throw coordErr;
+    }
+
+    // Step 3: Synthesis Guard & Final Report Generation
+    const report = await synthesizeIntelligenceReport(
+      evidence,
+      effectivePrompt,
+      mode,
+      classification.intent,
+      classification.claims
+    );
+
+    // Step 4: Asynchronously update Qdrant Vector Cache with today's capturedDate
+    upsertReportToVectorCache(prompt, targetSymbol, report, mode).catch((err) => {
+      console.warn("Failed to async upsert report to Qdrant:", err);
+    });
+
+    return NextResponse.json({ success: true, report });
   } catch (error: any) {
     console.error("Error in /api/analyze:", error);
     return NextResponse.json(

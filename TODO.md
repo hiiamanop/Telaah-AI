@@ -42,7 +42,7 @@
 - [x] Write robo-trade design: signals, risk limits, fees, paper-first; live broker execution blocked until API access <!-- id=40 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium done=2026-11-27 created=2026-11-24 -->
-- [•] Full IDX fundamentals/flow passes (flow pass running) <!-- id=43 priority=medium created=2026-11-24 -->
+- [x] Full IDX fundamentals/flow passes <!-- id=43 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high done=2026-11-26 created=2026-11-24 -->
 - [x] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high done=2026-11-26 created=2026-11-24 -->

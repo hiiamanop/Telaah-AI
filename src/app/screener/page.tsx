@@ -36,6 +36,12 @@ export default function ScreenerPage() {
   const [activePreset, setActivePreset] = useState("");
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [fallback, setFallback] = useState(false);
+  const [fullMode, setFullMode] = useState(false);
+  const [fullMeta, setFullMeta] = useState<{
+    complete: boolean;
+    total: number;
+    generatedAt: string | null;
+  } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -84,6 +90,44 @@ export default function ScreenerPage() {
     setPresets(loadPresets());
   }, []);
 
+  const loadFull = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/screener/full-snapshot", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Gagal memuat full IDX.");
+      }
+      setItems((data.items ?? []) as MarketMetricItem[]);
+      setFullMeta({
+        complete: Boolean(data.complete),
+        total: Number(data.total) || 962,
+        generatedAt: data.generatedAt ?? null,
+      });
+      setSnapshotAt(data.generatedAt ?? null);
+      setFallback(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Gagal memuat full IDX."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = (full: boolean) => {
+    setFullMode(full);
+    setActivePreset("");
+    setSector("all");
+    setMaxPe("");
+    setMaxPb("");
+    if (full) void loadFull();
+    else void load();
+  };
+
   const applyPreset = (id: string) => {
     setActivePreset(id);
     const preset = presets.find((item) => item.id === id);
@@ -125,14 +169,18 @@ export default function ScreenerPage() {
     const rsiLimit = Number(minRsi);
     return items.filter((item) => {
       if (needle && !item.symbol.includes(needle) && !item.name.toUpperCase().includes(needle)) return false;
-      if (sector !== "all" && item.sector !== sector) return false;
-      if (maxPe && Number.isFinite(peLimit) && (item.pe === null || item.pe > peLimit)) return false;
-      if (maxPb && Number.isFinite(pbLimit) && (item.pb === null || item.pb > pbLimit)) return false;
+      if (!fullMode) {
+        if (sector !== "all" && item.sector !== sector) return false;
+        if (maxPe && Number.isFinite(peLimit) && (item.pe === null || item.pe > peLimit)) return false;
+        if (maxPb && Number.isFinite(pbLimit) && (item.pb === null || item.pb > pbLimit)) return false;
+      }
       if (minRsi && Number.isFinite(rsiLimit) && (item.rsi === null || item.rsi < rsiLimit)) return false;
       if (trend !== "all" && item.trend !== trend) return false;
       return true;
     });
-  }, [items, query, sector, maxPe, maxPb, minRsi, trend]);
+  }, [items, query, sector, maxPe, maxPb, minRsi, trend, fullMode]);
+
+  const visibleResults = results.slice(0, 200);
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#f7f7f8] dark:bg-[#121214] text-zinc-900 dark:text-zinc-100 transition-colors">
@@ -148,16 +196,42 @@ export default function ScreenerPage() {
                 Screener
               </h1>
               <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400">
-                {SYMBOLS.length} likuid
+                {fullMode ? `${fullMeta?.total ?? 962} IDX` : `${SYMBOLS.length} likuid`}
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Filter valuasi, RSI, tren, dan foreign flow untuk 88 emiten likuid.
-              Snapshot diperbarui harian oleh cron; fallback 20 emiten jika
-              snapshot belum siap.
+              {fullMode
+                ? "Full IDX: harga, perubahan, RSI, dan tren. PER/PBV/flow belum tersedia untuk seluruh bursa."
+                : "Filter valuasi, RSI, tren, dan foreign flow untuk 88 emiten likuid. Snapshot diperbarui harian oleh cron; fallback 20 emiten jika snapshot belum siap."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 dark:border-white/10 dark:bg-white/[0.03]">
+              <button
+                type="button"
+                onClick={() => switchMode(false)}
+                className={`rounded-md px-2 py-1.5 font-mono text-[10px] transition ${
+                  !fullMode
+                    ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                    : "text-slate-500 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+                aria-pressed={!fullMode}
+              >
+                88 likuid
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode(true)}
+                className={`rounded-md px-2 py-1.5 font-mono text-[10px] transition ${
+                  fullMode
+                    ? "bg-zinc-900 text-white dark:bg-white dark:text-black"
+                    : "text-slate-500 hover:text-zinc-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
+                aria-pressed={fullMode}
+              >
+                Full IDX
+              </button>
+            </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
@@ -169,7 +243,7 @@ export default function ScreenerPage() {
             </div>
             <button
               type="button"
-              onClick={() => void load()}
+              onClick={() => void (fullMode ? loadFull() : load())}
               disabled={loading}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-zinc-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
             >
@@ -186,6 +260,14 @@ export default function ScreenerPage() {
           </p>
         )}
 
+        {fullMode && fullMeta && !fullMeta.complete && (
+          <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+            Snapshot full IDX sedang dibangun: {items.length}/{fullMeta.total}{" "}
+            emiten. Data masih parsial.
+          </p>
+        )}
+
+        {!fullMode && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c]">
           <Bookmark className="h-3.5 w-3.5 text-slate-400" />
           <select
@@ -225,8 +307,10 @@ export default function ScreenerPage() {
             Hapus
           </button>
         </div>
+        )}
 
-        <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c] sm:grid-cols-2 lg:grid-cols-6">
+        <div className={`grid gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c] sm:grid-cols-2 ${fullMode ? "lg:grid-cols-3" : "lg:grid-cols-6"}`}>
+          {!fullMode && (
           <select
             value={sector}
             onChange={(event) => setSector(event.target.value)}
@@ -238,6 +322,8 @@ export default function ScreenerPage() {
               <option key={item} value={item}>{item}</option>
             ))}
           </select>
+          )}
+          {!fullMode && (
           <input
             value={maxPe}
             onChange={(event) => setMaxPe(event.target.value)}
@@ -245,6 +331,8 @@ export default function ScreenerPage() {
             inputMode="decimal"
             className="h-8 rounded-md border border-slate-200 bg-white px-2 font-mono text-[11px] text-zinc-700 outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
           />
+          )}
+          {!fullMode && (
           <input
             value={maxPb}
             onChange={(event) => setMaxPb(event.target.value)}
@@ -252,6 +340,7 @@ export default function ScreenerPage() {
             inputMode="decimal"
             className="h-8 rounded-md border border-slate-200 bg-white px-2 font-mono text-[11px] text-zinc-700 outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
           />
+          )}
           <input
             value={minRsi}
             onChange={(event) => setMinRsi(event.target.value)}
@@ -271,7 +360,7 @@ export default function ScreenerPage() {
             <option value="Bearish">Bearish</option>
           </select>
           <span className="self-center text-right font-mono text-[10px] text-slate-400">
-            {results.length} hasil
+            {results.length} hasil{fullMode && results.length > 200 ? " · tampil 200" : ""}
           </span>
         </div>
 
@@ -283,6 +372,14 @@ export default function ScreenerPage() {
         ) : error ? (
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 text-center text-sm text-rose-600 dark:text-rose-300">
             {error}
+          </div>
+        ) : fullMode && items.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-white/10 dark:bg-[#0b0b0c]">
+            <p className="text-sm font-medium text-zinc-900 dark:text-white">Snapshot full IDX belum tersedia.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Jalankan <code>./deploy/podman/screener-full-snapshot.sh</code>{" "}
+              atau tunggu cron 18:00.
+            </p>
           </div>
         ) : results.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-white/10 dark:bg-[#0b0b0c]">
@@ -304,7 +401,7 @@ export default function ScreenerPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-                {results.map((item) => (
+                {visibleResults.map((item) => (
                   <tr key={item.symbol}>
                     <td className="px-4 py-2.5">
                       <a href={`/chart?symbol=${item.symbol}&tf=1Y`} className="flex items-center gap-2">
@@ -332,7 +429,9 @@ export default function ScreenerPage() {
           </div>
         )}
         <p className="text-[10px] text-slate-500 dark:text-slate-400">
-          Sampel 88 emiten likuid, bukan seluruh bursa. Bukan rekomendasi.
+          {fullMode
+            ? "Full IDX: price/technical snapshot; PER/PBV/flow belum tersedia untuk seluruh bursa. Bukan rekomendasi."
+            : "Sampel 88 emiten likuid, bukan seluruh bursa. Bukan rekomendasi."}
         </p>
       </main>
     </div>

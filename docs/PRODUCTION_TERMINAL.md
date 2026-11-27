@@ -58,12 +58,12 @@ For a market terminal we add:
 | Latency | Seconds; SSE refresh 5s intraday | Sub-second streaming, sequence numbers, stale-data detection |
 | Coverage | IDX equities, limited indices/commodities | Multi-asset: equities, indices, FX, commodities, bonds |
 | UI | Separate pages | Multi-panel workspace, command line, saved layouts, keyboard-first |
-| Reliability | Single local pod + Cloudflare tunnel; VPS deploy currently fails | HA deploy, health checks, failover, blue/green, backups |
+| Reliability | This PC runs the local Podman pod behind Cloudflare Tunnel (intentional production) | Health checks, backups, fast restart, and a documented local deploy |
 | Observability | Ad-hoc logs | Metrics, traces, centralized logs, SLOs, on-call |
 | Security | Cloudflare Access, rate limits | RBAC, audit trail, secret rotation, dependency scanning |
 | Caching | File cache + in-memory; Redis for chart; Qdrant cache empty | Redis for numeric/API cache; Qdrant for semantic terminal replay |
 | Testing | Vitest suite, tsc, build, lint | CI on every PR, smoke tests, load tests, restore drills |
-| Data rights | Vendor sessions/ToS must be respected | Exchange/vendor licenses and redistribution rights |
+| Data rights | Personal, non-redistributed use; respect vendor ToS | No redistribution; no exchange real-time license required for this personal setup |
 
 ## 4. Target architecture
 
@@ -110,7 +110,9 @@ Planned additions:
 - [x] Global command palette (`Cmd/Ctrl+K`) with `BBCA GO`, `BBCA HP`,
       `BBCA HARM`, and function commands.
 - [x] CI workflow for typecheck, tests, lint, and build.
-- [x] Deploy workflow skips cleanly when VPS secrets are absent.
+- [x] Local production deploy: `deploy/podman/deploy-local.sh` builds on this PC, restarts the pod, and clears app caches.
+- [x] VPS auto-deploy workflow removed; this PC + Cloudflare Tunnel is the production target.
+- [x] `deploy/podman/deploy-local.sh` always builds on this PC with `--no-cache`, clears app caches, and preserves harmonic research logs.
 - [x] Backup script (restore drill still pending).
 
 ## 6. Phase 1: terminal workspace

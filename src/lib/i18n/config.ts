@@ -33,6 +33,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "Terminal",
     "nav.watchlist": "Watchlist",
+    "nav.workspace": "Workspace",
     "nav.chart": "Chart",
     "nav.harmonic": "Harmonic",
     "nav.portfolio": "Portfolio",
@@ -123,6 +124,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "Terminal",
     "nav.watchlist": "Watchlist",
+    "nav.workspace": "Workspace",
     "nav.chart": "Chart",
     "nav.harmonic": "Harmonic",
     "nav.portfolio": "Portfolio",
@@ -213,6 +215,7 @@ export const UI_DICTIONARY: Record<SupportedLocale, Record<string, string>> = {
     // Nav & Header
     "nav.terminal": "终端工作台",
     "nav.watchlist": "自选股清单",
+    "nav.workspace": "工作区",
     "nav.chart": "图表",
     "nav.harmonic": "谐波",
     "nav.portfolio": "投资组合",

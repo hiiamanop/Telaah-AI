@@ -40,6 +40,31 @@ export interface FinancialHealthAnalysis {
   };
 }
 
+/**
+ * Yahoo reports quarterly (3M) figures. The date is the quarter-end, so a
+ * 2026-06-30 period is Q2 2026 — not cumulative H1 2026.
+ */
+export function quarterLabel(date: string | null): string | null {
+  if (!date) return null;
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const quarter = Math.floor(parsed.getUTCMonth() / 3) + 1;
+  return `Q${quarter} ${parsed.getUTCFullYear()}`;
+}
+
+/**
+ * The most recently completed calendar quarter. Used to warn when provider
+ * financials are a full quarter behind the current reporting cycle.
+ */
+export function latestCompletedQuarterEnd(now: Date = new Date()): string {
+  const year = now.getUTCFullYear();
+  const quarter = Math.floor(now.getUTCMonth() / 3);
+  const ends = ["03-31", "06-30", "09-30", "12-31"];
+  const index = (quarter + 3) % 4;
+  const endYear = quarter === 0 ? year - 1 : year;
+  return `${endYear}-${ends[index]}`;
+}
+
 function calcMargin(numerator: number | null | undefined, denominator: number | null | undefined): number | null {
   if (numerator === null || numerator === undefined || denominator === null || denominator === undefined || denominator === 0) {
     return null;

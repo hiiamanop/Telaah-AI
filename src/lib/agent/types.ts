@@ -18,7 +18,23 @@ import {
 export type AnalysisMode = "quick" | "full";
 
 export const REPORT_DATA_SOURCE = "open-market";
-export const REPORT_DATA_VERSION = 8;
+export const REPORT_DATA_VERSION = 9;
+
+/**
+ * Manual update for a period the provider has not ingested yet. This is a
+ * safety valve for late filings; it never replaces the provider's quarterly
+ * series, it only adds a clearly-sourced newer-period note.
+ */
+export interface FundamentalUpdate {
+  period: string;
+  periodEnd: string;
+  periodType: "cumulative" | "quarter";
+  summary: string;
+  source: string;
+  sourceUrl?: string;
+  asOf: string;
+  notes?: string;
+}
 
 export type IntentType =
   | "claim_check"
@@ -118,6 +134,7 @@ export interface CompanyIntelligenceReport {
   tradingPlan?: TradingPlanResult;
   segments?: any;
   providerError?: string;
+  fundamentalUpdate?: FundamentalUpdate;
   dataSource: "open-market" | "sectors";
   dataVersion: number;
   dataLimitations: string[];

@@ -1,0 +1,12 @@
+{
+  "BUMI": {
+    "period": "9M 2026",
+    "periodEnd": "2026-09-30",
+    "periodType": "cumulative",
+    "summary": "Laba bersih atribusi pemilik Rp2,66 triliun (US$148,48 juta, +404,9% YoY); laba periode konsolidasi US$174,57 juta (+190,6% YoY); pendapatan US$1,44 miliar (+38,9% YoY); operating cash flow US$43,18 juta; free cash flow -US$184,34 juta.",
+    "source": "Laporan keuangan 9M 2026; Emitennews/Bisnis.com",
+    "sourceUrl": "https://emitennews.com/news/laba-bumi-naik-405-mengapa-arus-kas-bebas-justru-minus-usd-184-juta",
+    "asOf": "2026-11-26",
+    "notes": "Angka provider terakhir masih Q2 2026 (3 bulan), bukan kumulatif 9M. Laba atribusi Rp2,66 triliun; laba konsolidasi US$174,57 juta."
+  }
+}

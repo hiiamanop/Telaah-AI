@@ -1,5 +1,6 @@
 import { callOpenRouter } from "./openrouter";
 import { EvidenceCollectionResult } from "./coordinator";
+import { quarterLabel } from "../quant/financials";
 import {
   AnalysisMode,
   AtomicClaim,
@@ -44,10 +45,13 @@ STANDAR GAYA PENULISAN INSTITUSIONAL (ANTI-AI SLOP):
 1. HINDARI TOTAL: Segala bentuk emoji (✨, 💡, 🚀, dll.), basa-basi pembuka ("Halo!", "Tentu, mari kita telaah..."), kalimat penutup klise ("Semoga membantu!"), dan REPETISI KATA/LOOPING (dilarang mengulang kata yang sama seperti "bersih bersih bersih").
 2. DIRECT ANSWER:
    - Jawab langsung pertanyaan atau topik inti pengguna di 1-2 kalimat pertama dengan angka data riil. Panjang maksimal 3 kalimat.
-   - Contoh: "TLKM mencatat pendapatan Rp 38,69T dengan laba bersih Rp 6,28T (NPM 16,23%) per semester I 2026. Aliran broker 5 hari menunjukkan net outflow asing Rp 113,4M dengan valuasi PER 14,5x."
+   - Contoh: "TLKM mencatat pendapatan Rp 38,69T dengan laba bersih Rp 6,28T (NPM 16,23%) pada Q2 2026 (3 bulan). Aliran broker 5 hari menunjukkan net outflow asing Rp 113,4M dengan valuasi PER 14,5x."
+   - Data financials adalah kuartalan (3M), bukan kumulatif H1/9M. Jangan menyebut "semester I" atau "9M" hanya karena tanggal periode 30 Juni/30 September; sebut Q1/Q2/Q3/Q4 dan jelaskan bila pengguna membandingkan dengan angka kumulatif.
    - Jika pengguna menanyakan segmen/lini bisnis spesifik, sebutkan angka dari pos resmi yang dilaporkan.
    - JIKA valuation.current_pe/current_pb TERSEDIA, JANGAN menulis "valuasi tidak dapat dihitung". Sebut angka PER/PBV tersebut dan, bila perlu, jelaskan bahwa laporan laba rugi rinci tidak tersedia.
    - JIKA financials.latest atau periods kosong, JANGAN mengklaim "margin operasional solid", "arus kas positif", atau "neraca kuat". Gunakan "belum tersedia" atau "belum dapat diverifikasi".
+   - JIKA 'pembaruan_fundamental_manual' ada dan 'periode_berakhir' lebih baru dari 'financials.latestPeriodDate', gunakan ringkasannya sebagai data terbaru, sebutkan sumber/tanggal, dan JANGAN menyatakan klaim pengguna salah hanya karena data provider lebih lama. Bedakan laba atribusi vs konsolidasi dan kuartal vs kumulatif.
+   - JIKA 'berita_terbaru' menyebut periode laporan yang lebih baru dari 'financials.latestPeriodDate', jadikan itu sinyal bahwa provider mungkin tertinggal; jangan menolak klaim periode baru tanpa mengecek berita tersebut.
 3. EXECUTIVE SUMMARY:
    - Tulis 1-2 paragraf padat terstruktur:
      Paragraf 1: Posisi bisnis, margin laba, dan kesehatan neraca (DER/kas).
@@ -98,7 +102,9 @@ Jawab HANYA dalam format JSON valid berikut:
       : "-",
     segmen_pendapatan_resmi: segmenBreakdown,
     laba_pendapatan: {
-      periode: evidence.financials.latestPeriodDate,
+      periode: quarterLabel(evidence.financials.latestPeriodDate) ??
+        evidence.financials.latestPeriodDate,
+      tipePeriode: "kuartal (3M), bukan kumulatif H1/9M",
       pendapatan: evidence.financials.latest?.revenue
         ? `Rp ${(evidence.financials.latest.revenue / 1e12).toFixed(2)} T`
         : "-",
@@ -115,6 +121,24 @@ Jawab HANYA dalam format JSON valid berikut:
         ? `${evidence.financials.latest?.netMarginPct}%`
         : "-",
     },
+    pembaruan_fundamental_manual: evidence.fundamentalUpdate
+      ? {
+          periode: evidence.fundamentalUpdate.period,
+          periode_berakhir: evidence.fundamentalUpdate.periodEnd,
+          tipe: evidence.fundamentalUpdate.periodType,
+          ringkasan: evidence.fundamentalUpdate.summary,
+          sumber: evidence.fundamentalUpdate.source,
+          sumber_url: evidence.fundamentalUpdate.sourceUrl,
+          tanggal: evidence.fundamentalUpdate.asOf,
+          catatan: evidence.fundamentalUpdate.notes,
+        }
+      : undefined,
+    berita_terbaru: evidence.events.news.slice(0, 5).map((item) => ({
+      tanggal: item.published_at?.slice(0, 10),
+      sumber: item.source,
+      judul: item.title,
+    })),
+    batasan_data: evidence.dataLimitations,
     arus_asing_dan_broker: {
       foreignFlow5Hari: evidence.flowLens.status !== "unavailable"
         ? `Rp ${(evidence.flowLens.foreignFlow.cumulative5d / 1e9).toFixed(1)} Miliar`
@@ -239,6 +263,8 @@ Jawab HANYA dalam format JSON valid berikut:
     integrity: evidence.integrity,
     tradingPlan: evidence.tradingPlan,
     segments: evidence.segments,
+    providerError: evidence.providerError,
+    fundamentalUpdate: evidence.fundamentalUpdate,
     dataSource: REPORT_DATA_SOURCE,
     dataVersion: REPORT_DATA_VERSION,
     dataLimitations: evidence.dataLimitations,

@@ -16,13 +16,20 @@ import type {
   MarketDataProvider,
 } from "../market/provider";
 import { computeTechnicalIndicators, TechnicalAnalysisResult } from "../quant/indicators";
-import { analyzeFinancialHealth, FinancialHealthAnalysis } from "../quant/financials";
+import {
+  analyzeFinancialHealth,
+  FinancialHealthAnalysis,
+  latestCompletedQuarterEnd,
+  quarterLabel,
+} from "../quant/financials";
 import { analyzeFlowLens, FlowLensAnalysis } from "../quant/flow";
+import { getFundamentalUpdate } from "../market/financial-overrides";
 import {
   AnalysisMode,
   AtomicClaim,
   EventsTimelineData,
   EvidenceRecord,
+  FundamentalUpdate,
   IntentType,
   PeerLensData,
 } from "./types";
@@ -130,6 +137,7 @@ export interface EvidenceCollectionResult {
   tradingPlan?: TradingPlanResult;
   segments?: any;
   providerError?: string;
+  fundamentalUpdate?: FundamentalUpdate;
   dataLimitations: string[];
   evidenceRecords: EvidenceRecord[];
   creditsConsumed: number;
@@ -170,6 +178,7 @@ export async function executeEvidencePlan(
 
   const needEvents =
     mode === "full" ||
+    needFinancials ||
     intent === "news_event" ||
     claims.some((c) => c.claimType === "event" || c.claimType === "flow");
 
@@ -360,6 +369,28 @@ export async function executeEvidencePlan(
     quarterlyData || [],
     companyReport?.financials
   );
+  const fundamentalUpdate = getFundamentalUpdate(clean);
+
+  if (financials.latestPeriodDate) {
+    const expectedQuarterEnd = latestCompletedQuarterEnd();
+    if (financials.latestPeriodDate < expectedQuarterEnd) {
+      dataLimitations.push(
+        `Data keuangan provider terakhir ${financials.latestPeriodDate} (${
+          quarterLabel(financials.latestPeriodDate) ?? "kuartal"
+        }); kuartal terbaru yang sudah selesai ${expectedQuarterEnd}. Laporan baru mungkin sudah dirilis tetapi belum masuk provider.`
+      );
+    }
+  }
+
+  if (
+    fundamentalUpdate &&
+    (!financials.latestPeriodDate ||
+      fundamentalUpdate.periodEnd > financials.latestPeriodDate)
+  ) {
+    dataLimitations.push(
+      `Ada pembaruan fundamental ${fundamentalUpdate.period} (${fundamentalUpdate.source}, ${fundamentalUpdate.asOf}) yang lebih baru dari data provider.`
+    );
+  }
 
   if (financials.status !== "unavailable" && financials.latest) {
     evidenceRecords.push({
@@ -647,6 +678,7 @@ export async function executeEvidencePlan(
     tradingPlan,
     segments: segmentsData,
     providerError: providerErrors,
+    fundamentalUpdate: fundamentalUpdate ?? undefined,
     dataLimitations,
     evidenceRecords,
     creditsConsumed: provider.getCreditsUsed(),

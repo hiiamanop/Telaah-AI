@@ -10,6 +10,7 @@ import { getEmbedding } from "./embeddings";
 const QDRANT_BASE_URL = process.env.QDRANT_URL || "http://localhost:6333";
 const COLLECTION_NAME = "telaah_intelligence_cache";
 const VECTOR_SIZE = 1536;
+const CACHE_TTL_DAYS = 7;
 
 export const CACHE_DATA_SOURCE = REPORT_DATA_SOURCE;
 export const CACHE_DATA_VERSION = REPORT_DATA_VERSION;
@@ -45,6 +46,21 @@ export function getTodayWIB(): string {
     day: "2-digit",
   });
   return formatter.format(now); // Output format: YYYY-MM-DD
+}
+
+/**
+ * Whether a cached report is still usable. Terminal answers live for at most
+ * seven days so a new weekly report can replace an older analysis.
+ */
+export function isVectorCacheFresh(
+  capturedDate: string,
+  today: string = getTodayWIB()
+): boolean {
+  const captured = Date.parse(`${capturedDate}T00:00:00+07:00`);
+  const current = Date.parse(`${today}T00:00:00+07:00`);
+  if (!Number.isFinite(captured) || !Number.isFinite(current)) return false;
+  const ageDays = Math.round((current - captured) / 86_400_000);
+  return ageDays >= 0 && ageDays <= CACHE_TTL_DAYS;
 }
 
 let isCollectionReady = false;
@@ -112,7 +128,7 @@ export async function ensureCollectionExists(): Promise<boolean> {
 /**
  * Perform semantic search on Qdrant
  * Threshold: similarity >= 0.88
- * Checks if capturedDate === todayWIB
+ * Freshness: capturedDate must be within the last 7 days (WIB)
  */
 export async function searchSemanticReportCache(
   prompt: string,
@@ -188,8 +204,7 @@ export async function searchSemanticReportCache(
     }
 
     const payload = hit.payload as VectorCachePayload;
-    const today = getTodayWIB();
-    const isFresh = payload.capturedDate === today;
+    const isFresh = isVectorCacheFresh(payload.capturedDate);
 
     return {
       isMatch: true,

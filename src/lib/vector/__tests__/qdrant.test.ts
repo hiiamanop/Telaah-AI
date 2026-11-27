@@ -7,12 +7,22 @@ vi.mock("../embeddings", () => ({
 import {
   CACHE_DATA_SOURCE,
   CACHE_DATA_VERSION,
+  isVectorCacheFresh,
   searchSemanticReportCache,
   upsertReportToVectorCache,
 } from "../qdrant";
 
 beforeEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("vector cache TTL", () => {
+  it("keeps terminal answers for seven days and rejects older ones", () => {
+    expect(isVectorCacheFresh("2026-11-20", "2026-11-27")).toBe(true);
+    expect(isVectorCacheFresh("2026-11-19", "2026-11-27")).toBe(false);
+    expect(isVectorCacheFresh("2026-11-28", "2026-11-27")).toBe(false);
+    expect(isVectorCacheFresh("not-a-date", "2026-11-27")).toBe(false);
+  });
 });
 
 describe("semantic cache versioning", () => {

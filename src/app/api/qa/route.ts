@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callOpenRouter } from "@/lib/agent/openrouter";
 import { extractVisionDataWithClaude } from "@/lib/agent/vision";
+import {
+  INJECTION_REFUSAL,
+  detectSectorRequest,
+  looksLikePromptInjection,
+  sanitizeUserPrompt,
+} from "@/lib/agent/conversation";
+import { buildBankShortlistMessage } from "@/lib/screener/bank-screener";
+import { RATE_LIMIT_RULES, guardRateLimit } from "@/lib/security/rate-limit";
 import { CompanyIntelligenceReport } from "@/lib/agent/types";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 
@@ -15,7 +23,14 @@ export async function POST(req: NextRequest) {
     const history: Array<{ role: "user" | "assistant"; text: string }> = Array.isArray(body.history) ? body.history : [];
     const images: string[] = Array.isArray(body.images) ? body.images : [];
 
-    if ((!question && images.length === 0) || !report) {
+    if (
+      (!question && images.length === 0) ||
+      !report ||
+      !report.symbol ||
+      !report.technical ||
+      !report.financials ||
+      !report.flowLens
+    ) {
       return NextResponse.json(
         {
           error:
@@ -23,6 +38,17 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    if (looksLikePromptInjection(question)) {
+      return NextResponse.json({ success: true, answer: INJECTION_REFUSAL });
+    }
+
+    if (detectSectorRequest(question)) {
+      return NextResponse.json({
+        success: true,
+        answer: await buildBankShortlistMessage(),
+      });
     }
 
     let visionContext = "";

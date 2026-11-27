@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SectorsClient } from "@/lib/sectors/client";
+import { getMarketProvider } from "@/lib/market";
+import { guardRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rate-limit";
+import { runAnalysis } from "@/lib/agent/analysis-service";
 import { classifyInputAndExtractClaims } from "@/lib/agent/classifier";
 import { executeEvidencePlan } from "@/lib/agent/coordinator";
 import { synthesizeIntelligenceReport } from "@/lib/agent/synthesizer";
 import { callOpenRouter } from "@/lib/agent/openrouter";
 import { extractVisionDataWithClaude } from "@/lib/agent/vision";
 import { AnalysisMode } from "@/lib/agent/types";
-import { sectorsErrorMessage } from "@/lib/sectors/errors";
+import { marketDataErrorMessage } from "@/lib/market/errors";
 import {
   searchSemanticReportCache,
   upsertReportToVectorCache,
@@ -29,6 +31,35 @@ export async function POST(req: NextRequest) {
         { error: "Prompt atau gambar analisis tidak boleh kosong." },
         { status: 400 }
       );
+    }
+
+    // Text-only requests use the current analysis service. The legacy
+    // pipeline below stays for image requests that need vision extraction.
+    if (images.length === 0) {
+      const result = await runAnalysis({ prompt, mode, confirmedSymbol });
+      if (result.type === "error") {
+        return NextResponse.json(
+          { error: result.message },
+          { status: result.status }
+        );
+      }
+      if (result.type === "message") {
+        return NextResponse.json({
+          success: true,
+          assistantMessage: result.message,
+          conversation: true,
+        });
+      }
+      if (result.type === "confirmation") {
+        return NextResponse.json({
+          success: true,
+          needsConfirmation: true,
+          candidateSymbol: result.candidateSymbol,
+          message: result.message,
+          classification: result.classification,
+        });
+      }
+      return NextResponse.json({ success: true, report: result.report });
     }
 
     // Step 0: Stage 1 Pipeline (Vision Extraction with Multimodal Claude 3.7 Sonnet)
@@ -101,9 +132,10 @@ DILARANG memberikan rekomendasi beli/jual ilegal (selalu sertakan disclaimer edu
       return NextResponse.json(
         {
           needsConfirmation: true,
-          candidateSymbol: result.candidateSymbol,
-          message: result.message,
-          classification: result.classification,
+          candidateSymbol: classification.symbol || "",
+          message:
+            "Tidak dapat mendeteksi kode saham IDX 4 huruf secara pasti. Silakan konfirmasi kode saham.",
+          classification,
         },
         { status: 200 }
       );
@@ -128,7 +160,7 @@ DILARANG memberikan rekomendasi beli/jual ilegal (selalu sertakan disclaimer edu
     }
 
     // Step 2: Coordinator & Evidence Collection (Cache Miss / Stale Day)
-    const sectorsClient = new SectorsClient();
+    const sectorsClient = getMarketProvider();
     let evidence;
     try {
       evidence = await executeEvidencePlan(

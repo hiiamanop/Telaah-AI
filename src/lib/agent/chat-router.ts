@@ -4,15 +4,19 @@
  * handles follow-up context (e.g., "bila dibandingkan dengan WIFI"), and maintains conversational continuity.
  */
 
-import idxCompanies from "@/data/idx-companies.json";
+// Common 4-letter words in Indonesian and English that must never be mistaken for stock tickers
+const LOWERCASE_AMBIGUOUS_TICKERS = new Set(["BANK"]);
 
-/**
- * Validated registry of all 960+ official Indonesian Stock Exchange (IDX) tickers.
- * Ensures arbitrary 4-letter words (e.g. LAIN, BARU, SAMA, DULU) are never mistaken for stock symbols.
- */
-export const VALID_IDX_TICKERS = new Set<string>(
-  idxCompanies.map((c) => c.symbol.toUpperCase().trim())
-);
+const COMMON_WORDS_BLACKLIST = new Set([
+  "BILA", "JIKA", "NGAN", "DENG", "SAMA", "DARI", "PADA", "AKAN", "YANG", "TAPI",
+  "JUGA", "KITA", "KAMI", "SAYA", "KAMU", "NAMA", "BUAT", "BISA", "DONG", "KALO",
+  "ATAU", "BAIK", "DULU", "HARI", "LALU", "KINI", "ESOK", "SAAT", "PULA", "DEMI",
+  "CARA", "AGAR", "BIAR", "DAPAT", "MAKA", "LEBI", "KURG", "TIDK", "TIDA", "BANY",
+  "SEDI", "LIAT", "CEKK", "BAGI", "MANA", "GIMA", "APAK", "TENT", "SUDA", "BELU",
+  "INFO", "DATA", "POST", "CHAT", "USER", "BOTS", "FULL", "FREE", "TEST", "WITH",
+  "WHEN", "WHAT", "MORE", "LESS", "GOOD", "MUCH", "SOME", "MANY", "VERY", "JUST",
+  "WELL", "HAVE", "BEEN", "WILL", "FROM", "THEM", "THEY", "THIS", "THAT", "HERE",
+]);
 
 /**
  * Extract legitimate 4-letter IDX tickers from a user prompt.
@@ -23,8 +27,15 @@ export function extractValidTickers(text: string): string[] {
   // 1. Explicitly tagged tickers: "saham inet", "emiten wifi", "$BBCA"
   const taggedMatches = text.matchAll(/(?:saham|emiten|kode|\$)\s*([a-zA-Z]{4})\b/gi);
   for (const m of taggedMatches) {
-    const sym = m[1].toUpperCase();
-    if (VALID_IDX_TICKERS.has(sym) && !found.includes(sym)) {
+    const rawToken = m[1];
+    const sym = rawToken.toUpperCase();
+    if (
+      rawToken === rawToken.toLowerCase() &&
+      LOWERCASE_AMBIGUOUS_TICKERS.has(sym)
+    ) {
+      continue;
+    }
+    if (!COMMON_WORDS_BLACKLIST.has(sym) && !found.includes(sym)) {
       found.push(sym);
     }
   }
@@ -33,7 +44,7 @@ export function extractValidTickers(text: string): string[] {
   const capsMatches = text.matchAll(/\b([A-Z]{4})\b/g);
   for (const m of capsMatches) {
     const sym = m[1].toUpperCase();
-    if (VALID_IDX_TICKERS.has(sym) && !found.includes(sym)) {
+    if (!COMMON_WORDS_BLACKLIST.has(sym) && !found.includes(sym)) {
       found.push(sym);
     }
   }

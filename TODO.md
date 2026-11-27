@@ -80,3 +80,4 @@
 - [ ] Add multi-user messaging (requires auth, DB, WebSocket) <!-- id=78 priority=low created=2026-11-27 -->
 - [ ] Add bond/options depth (data source unavailable) <!-- id=79 priority=low created=2026-11-27 -->
 - [ ] Add licensed exchange tick/order-book feed <!-- id=80 priority=medium created=2026-11-27 -->
+- [x] Add HBA coal benchmark to Macro & markets <!-- id=81 priority=medium done=2026-11-27 created=2026-11-27 -->

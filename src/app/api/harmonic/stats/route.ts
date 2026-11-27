@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runHarmonicStats, type HarmonicStatsResult } from "@/lib/harmonic/outcomes";
+import { cacheGet, cacheSet } from "@/lib/storage/json-cache";
 import { RATE_LIMIT_RULES, guardRateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const globalForStats = globalThis as typeof globalThis & {
-  __telaahHarmonicStats?: { at: number; result: HarmonicStatsResult };
-};
 
 export async function GET(req: NextRequest) {
   const limited = await guardRateLimit(
@@ -19,13 +16,16 @@ export async function GET(req: NextRequest) {
   if (limited) return limited;
 
   const refresh = new URL(req.url).searchParams.get("refresh") === "1";
-  const cached = globalForStats.__telaahHarmonicStats;
-  if (!refresh && cached && Date.now() - cached.at < 12 * 3600_000) {
-    return NextResponse.json({ success: true, cached: true, ...cached.result });
+  const redisKey = "harmonic:stats:v2";
+  if (!refresh) {
+    const cached = await cacheGet<HarmonicStatsResult>(redisKey);
+    if (cached) {
+      return NextResponse.json({ success: true, cached: true, ...cached });
+    }
   }
   try {
     const result = await runHarmonicStats();
-    globalForStats.__telaahHarmonicStats = { at: Date.now(), result };
+    await cacheSet(redisKey, result, 12 * 3600);
     return NextResponse.json({ success: true, cached: false, ...result });
   } catch (error) {
     return NextResponse.json(

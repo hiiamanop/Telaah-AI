@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   Search,
   Command,
 } from "lucide-react";
+import { CommandPalette } from "./CommandPalette";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { useI18n } from "@/lib/i18n/context";
@@ -46,6 +47,18 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const pathname = usePathname();
   const { t } = useI18n();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const navLinks = [
     { href: "/", label: t("nav.terminal", "Terminal") },
@@ -96,7 +109,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex-1 max-w-sm mx-2 py-0.5">
             <button
               type="button"
-              onClick={onFocusSearch}
+              onClick={() => {
+                if (pathname === "/" && onFocusSearch) onFocusSearch();
+                else setPaletteOpen(true);
+              }}
               className="w-full flex items-center justify-between px-3 py-2 rounded bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-zinc-500 hover:text-slate-900 dark:hover:text-slate-200 transition text-xs"
             >
               <span className="flex items-center gap-1.5">
@@ -163,6 +179,11 @@ export const Header: React.FC<HeaderProps> = ({
       </nav>
 
       {/* Global Macro Ticker Tape Strip */}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+      />
+
       {marketIndices && marketIndices.length > 0 && (
         <div className="border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/60 px-3 py-1 flex items-center text-[11px] font-mono overflow-hidden">
           <div className="shrink-0 flex items-center gap-2 pr-3 border-r border-slate-200 dark:border-white/10 font-sans font-medium text-slate-500 dark:text-slate-400">

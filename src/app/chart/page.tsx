@@ -3,15 +3,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  ArrowLeftRight,
   BarChart3,
   Clock3,
   Database,
   Loader2,
   RefreshCw,
+  Star,
   TrendingDown,
   TrendingUp,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
@@ -21,9 +24,14 @@ import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
 import { chartQuery } from "@/lib/chart/url";
 import { getCompanyName } from "@/lib/sectors/companies";
+import type { CorporateActionItem } from "@/lib/sectors/types";
 import type { HarmonicMatch } from "@/lib/quant/harmonic";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
-import { getWatchlistSymbols } from "@/lib/storage/history";
+import {
+  getWatchlistSymbols,
+  isWatchlisted,
+  toggleWatchlist,
+} from "@/lib/storage/history";
 
 const TIMEFRAMES: Array<{ key: ChartTimeframe; label: string }> = [
   { key: "1D", label: "1D" },
@@ -91,6 +99,12 @@ export default function ChartPage() {
   const [harmonicMatches, setHarmonicMatches] = useState<HarmonicMatch[]>([]);
   const [harmonicTf, setHarmonicTf] = useState<string | null>(null);
   const [harmonicLoading, setHarmonicLoading] = useState(false);
+  const [compareSymbol, setCompareSymbol] = useState("");
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [watched, setWatched] = useState(false);
+  const [corporateActions, setCorporateActions] = useState<
+    CorporateActionItem[]
+  >([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -100,6 +114,13 @@ export default function ChartPage() {
       .toUpperCase()
       .replace(".JK", "");
     if (/^[A-Z]{4}$/.test(requested)) setSymbol(requested);
+    const requestedCompare = (params.get("compare") ?? "")
+      .trim()
+      .toUpperCase()
+      .replace(".JK", "");
+    if (/^[A-Z]{4}$/.test(requestedCompare)) {
+      setCompareSymbol(requestedCompare);
+    }
     const requestedHtf = params.get("htf");
     if (
       requestedHtf === "4H" ||
@@ -127,9 +148,14 @@ export default function ChartPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const query = chartQuery(symbol, timeframe, harmonicTf);
+    const query = chartQuery(
+      symbol,
+      timeframe,
+      harmonicTf,
+      compareSymbol || null
+    );
     window.history.replaceState(null, "", `/chart?${query}`);
-  }, [symbol, timeframe, harmonicTf, hydrated]);
+  }, [symbol, timeframe, harmonicTf, compareSymbol, hydrated]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -178,8 +204,41 @@ export default function ChartPage() {
     timeframe,
     hydrated
   );
+  const { frame: compareFrame } = useChartStream(
+    compareSymbol,
+    timeframe,
+    hydrated && /^[A-Z]{4}$/.test(compareSymbol)
+  );
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setWatched(isWatchlisted(symbol));
+  }, [symbol, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    fetch(`/api/corporate-actions?symbol=${encodeURIComponent(symbol)}`, {
+      cache: "no-store",
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled) {
+          setCorporateActions(data?.success ? data.actions ?? [] : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCorporateActions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol, hydrated]);
 
   const current = frame?.symbol === symbol ? frame : null;
+  const currentCompare =
+    compareFrame?.symbol === compareSymbol ? compareFrame : null;
+  const compareChange = useMemo(() => changeOf(currentCompare), [currentCompare]);
   const change = useMemo(() => changeOf(current), [current]);
   const companyName = getCompanyName(symbol) ?? `PT ${symbol} Tbk`;
   const harmonic = harmonicEnabled ? harmonicMatches[0] ?? null : null;
@@ -327,6 +386,24 @@ export default function ChartPage() {
               </div>
 
               <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setWatched(toggleWatchlist(symbol))}
+                  aria-pressed={watched}
+                  title={
+                    watched
+                      ? "Hapus dari watchlist"
+                      : "Tambah ke watchlist"
+                  }
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 transition ${
+                    watched
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : "border-slate-200 bg-slate-50 text-slate-500 hover:text-zinc-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  <Star className={`h-3 w-3 ${watched ? "fill-current" : ""}`} />
+                  <span className="hidden sm:inline">Watchlist</span>
+                </button>
                 <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 dark:border-white/10 dark:bg-white/[0.03]">
                   <Database className="h-3 w-3" />
                   {current?.source === "stockbit"
@@ -382,11 +459,65 @@ export default function ChartPage() {
                   </span>
                 ) : null}
               </div>
-              {harmonic && (
-                <span className="text-[10px] font-mono text-slate-400">
-                  T1 Rp {harmonic.targets.t1.toLocaleString("id-ID", { maximumFractionDigits: 0 })} · T2 Rp {harmonic.targets.t2.toLocaleString("id-ID", { maximumFractionDigits: 0 })}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {compareSymbol ? (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-[10px] text-amber-700 dark:text-amber-300">
+                    <ArrowLeftRight className="h-3 w-3" />
+                    vs {compareSymbol}
+                    {currentCompare && (
+                      <span className="text-amber-600/80 dark:text-amber-200/80">
+                        Rp {formatPrice(currentCompare.last.close)}
+                        {compareChange
+                          ? ` (${compareChange.up ? "+" : ""}${compareChange.percent.toFixed(2)}%)`
+                          : ""}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompareSymbol("");
+                        setCompareOpen(false);
+                      }}
+                      aria-label="Hapus pembanding"
+                      className="ml-0.5 rounded p-0.5 transition hover:bg-amber-500/20"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ) : compareOpen ? (
+                  <SymbolSearch
+                    value=""
+                    onSelect={(value) => {
+                      if (value !== symbol) setCompareSymbol(value);
+                      setCompareOpen(false);
+                    }}
+                    className="w-52"
+                    placeholder="Bandingkan dengan..."
+                    ariaLabel="Cari emiten pembanding"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCompareOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 font-mono text-[10px] text-slate-500 transition hover:text-zinc-900 dark:border-white/10 dark:text-slate-400 dark:hover:text-white"
+                  >
+                    <ArrowLeftRight className="h-3 w-3" />
+                    Bandingkan
+                  </button>
+                )}
+                {harmonic && (
+                  <span className="text-[10px] font-mono text-slate-400">
+                    T1 Rp{" "}
+                    {harmonic.targets.t1.toLocaleString("id-ID", {
+                      maximumFractionDigits: 0,
+                    })}{" "}
+                    · T2 Rp{" "}
+                    {harmonic.targets.t2.toLocaleString("id-ID", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="p-3 sm:p-4">
               {!hydrated || (!current && status !== "offline") ? (
@@ -419,6 +550,9 @@ export default function ChartPage() {
                     intraday={timeframe === "1D" || timeframe === "1W"}
                     dataKey={`${current.symbol}:${current.timeframe}`}
                     harmonic={harmonic}
+                    compareCandles={currentCompare?.candles}
+                    compareSymbol={compareSymbol || null}
+                    corporateActions={corporateActions}
                     height={460}
                   />
                   {current.timeframe === "1D" && current.candles.length < 10 && (

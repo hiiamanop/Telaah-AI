@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ColorType,
   CrosshairMode,
@@ -17,6 +17,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { ChartCandle } from "@/lib/market/scraper-client";
+import type { CorporateActionItem } from "@/lib/sectors/types";
 import type { HarmonicMatch } from "@/lib/quant/harmonic";
 import { PrzBandPrimitive } from "@/components/chart/prz-band";
 
@@ -25,6 +26,9 @@ interface LiveChartProps {
   intraday: boolean;
   dataKey: string;
   harmonic?: HarmonicMatch | null;
+  compareCandles?: ChartCandle[];
+  compareSymbol?: string | null;
+  corporateActions?: CorporateActionItem[];
   height?: number;
 }
 
@@ -33,6 +37,12 @@ function chartTime(candle: ChartCandle, intraday: boolean): Time {
   // axis reads 09:00–16:00 instead of 02:00–09:00.
   if (intraday) return (candle.time + 7 * 3600) as UTCTimestamp;
   return candle.date ?? new Date(candle.time * 1000).toISOString().slice(0, 10);
+}
+
+function timeValue(time: Time): number {
+  return typeof time === "number"
+    ? time
+    : Date.parse(`${time}T00:00:00Z`) / 1000;
 }
 
 function formatAxisTime(time: Time, tickMarkType?: TickMarkType): string {
@@ -92,6 +102,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   intraday,
   dataKey,
   harmonic = null,
+  compareCandles,
+  compareSymbol = null,
+  corporateActions = [],
   height = 460,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,8 +118,21 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   const harmonicSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const harmonicLinesRef = useRef<IPriceLine[]>([]);
   const harmonicBandRef = useRef<PrzBandPrimitive | null>(null);
+  const compareSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const harmonicMarkersRef = useRef<SeriesMarker<Time>[]>([]);
+  const corporateMarkersRef = useRef<SeriesMarker<Time>[]>([]);
   const [hovered, setHovered] = useState<ChartCandle | null>(null);
   const [isDark, setIsDark] = useState(true);
+
+  const syncMarkers = useCallback(() => {
+    const series = candleRef.current;
+    if (!series) return;
+    const markers = [
+      ...harmonicMarkersRef.current,
+      ...corporateMarkersRef.current,
+    ].sort((left, right) => timeValue(left.time) - timeValue(right.time));
+    series.setMarkers(markers);
+  }, []);
 
   useEffect(() => {
     candlesRef.current = candles;
@@ -232,6 +258,9 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       harmonicSeriesRef.current = null;
       harmonicLinesRef.current = [];
       harmonicBandRef.current = null;
+      compareSeriesRef.current = null;
+      harmonicMarkersRef.current = [];
+      corporateMarkersRef.current = [];
     };
   }, [height, intraday]);
 
@@ -240,7 +269,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({
     const candleSeries = candleRef.current;
     if (!chart || !candleSeries) return;
 
-    candleSeries.setMarkers([]);
+    harmonicMarkersRef.current = [];
+    syncMarkers();
     if (harmonicSeriesRef.current) {
       try {
         chart.removeSeries(harmonicSeriesRef.current);
@@ -326,7 +356,8 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       line.setData(points);
       harmonicSeriesRef.current = line;
     }
-    if (markers.length > 0) candleSeries.setMarkers(markers);
+    harmonicMarkersRef.current = markers;
+    syncMarkers();
 
     const lines: IPriceLine[] = [];
     const addLine = (price: number, color: string, title: string, style = LineStyle.Dashed) => {
@@ -380,9 +411,103 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         }
         harmonicSeriesRef.current = null;
       }
-      candleSeries.setMarkers([]);
+      harmonicMarkersRef.current = [];
+    syncMarkers();
     };
-  }, [harmonic, intraday, dataKey, candles.length]);
+  }, [harmonic, intraday, dataKey, candles.length, syncMarkers]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    if (!compareSymbol || !compareCandles || compareCandles.length === 0) {
+      if (compareSeriesRef.current) {
+        try {
+          chart.removeSeries(compareSeriesRef.current);
+        } catch {
+          // Chart was already recreated.
+        }
+        compareSeriesRef.current = null;
+      }
+      chart.priceScale("left").applyOptions({ visible: false });
+      return;
+    }
+    let series = compareSeriesRef.current;
+    if (!series) {
+      series = chart.addLineSeries({
+        color: "#f59e0b",
+        lineWidth: 2,
+        priceScaleId: "left",
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+        title: compareSymbol,
+      });
+      compareSeriesRef.current = series;
+      chart.priceScale("left").applyOptions({
+        visible: true,
+        borderVisible: false,
+        scaleMargins: { top: 0.08, bottom: 0.28 },
+      });
+    }
+    const seen = new Set<string>();
+    const data = compareCandles
+      .map((candle) => ({
+        time: chartTime(candle, intraday),
+        value: candle.close,
+      }))
+      .filter((point) => {
+        const key = String(point.time);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((left, right) => timeValue(left.time) - timeValue(right.time));
+    series.applyOptions({ title: compareSymbol });
+    series.setData(data);
+  }, [compareSymbol, compareCandles, intraday, dataKey]);
+
+  useEffect(() => {
+    const candleSeries = candleRef.current;
+    if (!candleSeries) return;
+    if (!corporateActions.length) {
+      corporateMarkersRef.current = [];
+      syncMarkers();
+      return;
+    }
+    const source = candlesRef.current;
+    const byDate = new Map<string, ChartCandle>();
+    for (const candle of source) {
+      if (candle.date) byDate.set(candle.date, candle);
+    }
+    const sortedDates = [...byDate.keys()].sort();
+    const markers: SeriesMarker<Time>[] = [];
+    const seen = new Set<string>();
+    for (const action of corporateActions) {
+      const actionDate = action.ex_date ?? action.date;
+      if (!actionDate) continue;
+      let candle = byDate.get(actionDate);
+      if (!candle) {
+        const next = sortedDates.find((date) => date >= actionDate);
+        if (next) candle = byDate.get(next);
+      }
+      if (!candle) continue;
+      const isDividend = /dividen|dividend/i.test(
+        `${action.action_type ?? ""} ${action.description ?? ""}`
+      );
+      const key = `${candle.date}:${isDividend ? "D" : "S"}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      markers.push({
+        time: chartTime(candle, intraday),
+        position: "belowBar",
+        color: isDividend ? "#f59e0b" : "#a78bfa",
+        shape: "square",
+        text: isDividend ? "D" : "S",
+      });
+    }
+    corporateMarkersRef.current = markers;
+    syncMarkers();
+  }, [corporateActions, intraday, dataKey, syncMarkers]);
 
   useEffect(() => {
     if (!candleRef.current || !volumeRef.current || candles.length === 0) return;

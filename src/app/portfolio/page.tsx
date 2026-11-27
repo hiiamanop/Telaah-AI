@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Trash2, Wallet } from "lucide-react";
+import { CalendarDays, Loader2, Plus, Trash2, Wallet } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { SymbolSearch } from "@/components/SymbolSearch";
@@ -12,6 +12,7 @@ import {
   upsertHolding,
   type Holding,
 } from "@/lib/portfolio/store";
+import type { DividendCalendarItem } from "@/lib/market/dividend-calendar";
 import type { MarketMetricItem } from "@/lib/screener/market-metrics";
 
 function formatIdr(value: number): string {
@@ -31,11 +32,54 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [dividends, setDividends] = useState<DividendCalendarItem[]>([]);
+  const [dividendLoading, setDividendLoading] = useState(true);
+  const [dividendError, setDividendError] = useState<string | null>(null);
 
   useEffect(() => {
     setHoldings(loadHoldings());
     setReady(true);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDividendLoading(true);
+    setDividendError(null);
+    fetch("/api/dividend-calendar", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.success) {
+          throw new Error(data.error || "Kalender dividen tidak tersedia.");
+        }
+        setDividends((data.items ?? []) as DividendCalendarItem[]);
+        if (data.limited) {
+          setDividendError(
+            "Sumber IDX sedang lambat; daftar dividen mungkin tidak lengkap."
+          );
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDividendError(
+            err instanceof Error
+              ? err.message
+              : "Kalender dividen tidak tersedia."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDividendLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const holdingDividends = useMemo(() => {
+    const symbols = new Set(holdings.map((item) => item.symbol));
+    return dividends.filter((item) => symbols.has(item.symbol));
+  }, [dividends, holdings]);
 
   useEffect(() => {
     if (!ready || holdings.length === 0) return;
@@ -260,6 +304,88 @@ export default function PortfolioPage() {
             memuat harga...
           </div>
         )}
+
+        <section className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0b0b0c]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-white/[0.06]">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-amber-500" />
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Kalender dividen
+                </h2>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  Bulan ini · sumber IDX · {holdingDividends.length} untuk holdings
+                </p>
+              </div>
+            </div>
+            {dividendLoading && (
+              <span className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                memuat...
+              </span>
+            )}
+          </div>
+          {dividendError && (
+            <p className="border-b border-amber-500/10 bg-amber-500/5 px-4 py-2 text-[10px] text-amber-700 dark:text-amber-300">
+              {dividendError}
+            </p>
+          )}
+          {!dividendLoading && holdingDividends.length > 0 && (
+            <ul className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+              {holdingDividends.map((item) => (
+                <li
+                  key={`${item.symbol}-${item.date}-${item.description}`}
+                  className="flex items-start gap-3 px-4 py-2.5"
+                >
+                  <span className="mt-0.5 w-20 shrink-0 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                    {item.date}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      {item.symbol}
+                    </span>
+                    <span className="ml-1 rounded border border-amber-500/20 bg-amber-500/10 px-1 py-0.5 font-mono text-[9px] text-amber-700 dark:text-amber-300">
+                      {item.kind}
+                    </span>
+                    <p className="mt-0.5 truncate text-[10px] text-slate-500 dark:text-slate-400">
+                      {item.description}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!dividendLoading && holdingDividends.length === 0 && (
+            <p className="px-4 py-3 text-[11px] text-slate-500 dark:text-slate-400">
+              Tidak ada dividen untuk holdings bulan ini.
+            </p>
+          )}
+          {!dividendLoading && dividends.length > 0 && (
+            <details className="border-t border-slate-100 px-4 py-2 dark:border-white/[0.06]">
+              <summary className="cursor-pointer font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                Semua dividen bulan ini ({dividends.length})
+              </summary>
+              <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                {dividends.map((item) => (
+                  <div
+                    key={`all-${item.symbol}-${item.date}-${item.description}`}
+                    className="flex items-start gap-2 text-[10px]"
+                  >
+                    <span className="w-20 shrink-0 font-mono text-slate-400">
+                      {item.date}
+                    </span>
+                    <span className="w-10 shrink-0 font-mono font-bold text-zinc-700 dark:text-zinc-200">
+                      {item.symbol}
+                    </span>
+                    <span className="min-w-0 truncate text-slate-500 dark:text-slate-400">
+                      {item.description}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
       </main>
     </div>
   );

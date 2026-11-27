@@ -40,13 +40,13 @@
 - [x] Build Telegram alert center v1 (server watchlist, price, volume, breakout, foreign flow) <!-- id=38 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Add Stockbit session expiry alert and one-command relogin runbook <!-- id=39 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Write robo-trade design: signals, risk limits, fees, paper-first; live broker execution blocked until API access <!-- id=40 priority=high done=2026-11-24 created=2026-11-24 -->
-- [ ] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium created=2026-11-24 -->
-- [ ] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium created=2026-11-24 -->
+- [x] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium done=2026-11-27 created=2026-11-24 -->
+- [x] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [ ] Build IDX screener with fundamental/technical/flow filters and saved presets <!-- id=43 priority=medium created=2026-11-24 -->
-- [ ] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium created=2026-11-24 -->
+- [x] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high done=2026-11-26 created=2026-11-24 -->
 - [x] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high done=2026-11-26 created=2026-11-24 -->
-- [ ] Add bandar phase alerts (harmonic PRZ alerts are now live) <!-- id=47 priority=high created=2026-11-24 -->
+- [x] Add bandar phase alerts (harmonic PRZ alerts are now live) <!-- id=47 priority=high done=2026-11-27 created=2026-11-24 -->
 - [-] Approve BSJP assumptions (entry/exit time, universe, capital, broker) <!-- id=48 priority=high created=2026-11-24 -->
 - [x] Build BSJP pre-close signal screener (close strength, volume, trend, flow) <!-- id=49 priority=high done=2026-11-26 created=2026-11-25 -->
 - [-] Collect 4-8 weeks of BSJP paper journal and compare actual fills with backtest assumptions <!-- id=50 priority=high created=2026-11-26 -->
@@ -60,6 +60,16 @@
 - [x] Build a harmonic scanner page with filters and watchlist focus <!-- id=58 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Measure harmonic pattern success rate and target/invalidation outcomes <!-- id=59 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Expand harmonic success stats to 4H, 1W, and 1M with a larger sample <!-- id=60 priority=medium done=2026-11-26 created=2026-11-26 -->
-- [ ] Finish chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=61 priority=medium created=2026-11-26 -->
+- [x] Finish chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=61 priority=medium done=2026-11-27 created=2026-11-26 -->
 - [ ] Expand screener to the full IDX universe and saved presets <!-- id=62 priority=medium created=2026-11-26 -->
-- [ ] Add dividend calendar to the portfolio tracker <!-- id=63 priority=medium created=2026-11-26 -->
+- [x] Add dividend calendar to the portfolio tracker <!-- id=63 priority=medium done=2026-11-27 created=2026-11-26 -->
+- [x] Expand harmonic screener with 1D/1W visibility and remove the top-5 cap <!-- id=64 priority=high done=2026-11-27 created=2026-11-27 -->
+- [x] Validate harmonic stats: 88 symbols, walk-forward split, fees <!-- id=65 priority=high done=2026-11-27 created=2026-11-27 -->
+- [x] Add chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=66 priority=medium done=2026-11-27 created=2026-11-27 -->
+- [ ] Expand screener universe and add saved presets <!-- id=67 priority=medium created=2026-11-27 -->
+- [x] Add dividend calendar to the portfolio tracker <!-- id=68 priority=medium done=2026-11-27 created=2026-11-26 -->
+- [x] Add bandar phase alerts <!-- id=69 priority=high done=2026-11-27 created=2026-11-27 -->
+- [x] Guard the deploy workflow when VPS secrets are absent <!-- id=70 priority=medium done=2026-11-27 created=2026-11-27 -->
+- [ ] Build harmonic outcome logging and a reviewed calibration loop <!-- id=71 priority=high created=2026-11-27 -->
+- [ ] Expand the general screener from 88 liquid symbols to the full IDX universe <!-- id=72 priority=medium created=2026-11-27 -->
+- [ ] Move production deploy from the local pod to a repeatable HA target <!-- id=73 priority=high created=2026-11-27 -->

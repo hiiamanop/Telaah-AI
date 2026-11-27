@@ -18,7 +18,7 @@ import { LIQUID_IDX_UNIVERSE } from "./universe";
 
 const CACHE_FILE_PATH = path.join(process.cwd(), "data", "harmonic_cache.json");
 const CACHE_MAX_AGE_HOURS = 12;
-const CACHE_MAX_RESULTS = 5;
+const CACHE_MAX_RESULTS = 100;
 const LOOKBACK_YEARS = 5;
 const DEFAULT_CONCURRENCY = 4;
 
@@ -35,12 +35,14 @@ export interface HarmonicCandidate {
   symbol: string;
   price: number;
   best: HarmonicMatch;
+  matches: HarmonicMatch[];
   timeframes: HarmonicTimeframe[];
   confluenceCount: number;
   score: number;
 }
 
 export interface HarmonicScanResult {
+  version: number;
   generatedAt: string;
   date: string;
   direction?: "bullish" | "bearish" | "all";
@@ -194,6 +196,13 @@ async function scanSymbol(
       symbol,
       price: best.price,
       best,
+      matches: [...matches].sort(
+        (left, right) =>
+          right.score - left.score ||
+          Math.abs(left.distancePct) - Math.abs(right.distancePct) ||
+          TIMEFRAME_CONFIG[right.timeframe].weight -
+            TIMEFRAME_CONFIG[left.timeframe].weight
+      ),
       timeframes,
       confluenceCount: timeframes.length,
       score: best.score,
@@ -210,7 +219,13 @@ export function readHarmonicCache(
   try {
     if (!fs.existsSync(cachePath)) return null;
     const parsed = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as HarmonicScanResult;
-    if (!parsed?.generatedAt || !Array.isArray(parsed.results)) return null;
+    if (
+      parsed?.version !== 2 ||
+      !parsed.generatedAt ||
+      !Array.isArray(parsed.results)
+    ) {
+      return null;
+    }
     const ageHours = (now.getTime() - Date.parse(parsed.generatedAt)) / 3_600_000;
     if (!Number.isFinite(ageHours) || ageHours < 0 || ageHours > maxAgeHours) {
       return null;
@@ -290,6 +305,7 @@ export async function scanHarmonicUniverse(
   }
 
   const result: HarmonicScanResult = {
+    version: 2,
     generatedAt: now.toISOString(),
     date: jakartaDate(now),
     direction,

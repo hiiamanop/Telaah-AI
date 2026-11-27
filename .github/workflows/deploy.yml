@@ -9,7 +9,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Check VPS configuration
+        id: preflight
+        run: |
+          if [ -z "${{ secrets.VPS_HOST }}" ]; then
+            echo "VPS_HOST is not configured; skipping the VPS deploy."
+            echo "The live site is served by the local pod + Cloudflare tunnel."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "VPS_HOST is configured."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to VPS via SSH
+        if: steps.preflight.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}

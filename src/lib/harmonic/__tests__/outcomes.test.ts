@@ -3,6 +3,7 @@ import {
   aggregateOutcomes,
   measurePatternOutcome,
   type HistoricalPattern,
+  type PatternOutcome,
 } from "../outcomes";
 import type { HarmonicCandle } from "@/lib/quant/harmonic";
 
@@ -24,6 +25,7 @@ const pattern: HistoricalPattern = {
   direction: "bullish",
   dIndex: 4,
   dDate: "2026-01-05",
+  entry: 100,
   prz: { low: 98, high: 102 },
   invalidation: 95,
   targets: { t1: 110, t2: 120 },
@@ -55,6 +57,46 @@ describe("harmonic outcomes", () => {
     const outcome = measurePatternOutcome(pattern, candles);
     expect(outcome.status).toBe("invalidated");
     expect(outcome.daysToT1).toBeNull();
+  });
+
+  it("keeps timeframes separate and computes walk-forward stats", () => {
+    const t1: PatternOutcome = { status: "t1", daysToT1: 2, daysToT2: null };
+    const invalid: PatternOutcome = {
+      status: "invalidated",
+      daysToT1: null,
+      daysToT2: null,
+    };
+    const daily = { ...pattern, timeframe: "1D" as const };
+    const weekly = { ...pattern, timeframe: "1W" as const };
+    const samples = [
+      ...Array.from({ length: 3 }, () => ({
+        pattern: daily,
+        outcome: t1,
+        segment: "first" as const,
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        pattern: daily,
+        outcome: invalid,
+        segment: "first" as const,
+      })),
+      ...Array.from({ length: 5 }, () => ({
+        pattern: daily,
+        outcome: t1,
+        segment: "second" as const,
+      })),
+      { pattern: weekly, outcome: t1, segment: "first" as const },
+    ];
+    const stats = aggregateOutcomes(samples, { feePct: 0.4 });
+    const day = stats.find((row) => row.timeframe === "1D");
+    const week = stats.find((row) => row.timeframe === "1W");
+    expect(stats).toHaveLength(2);
+    expect(day?.total).toBe(10);
+    expect(day?.firstHalf.t1RatePct).toBe(60);
+    expect(day?.secondHalf.t1RatePct).toBe(100);
+    expect(day?.walkForwardVerdict).toBe("improved");
+    expect(day?.avgT1MovePct).toBe(10);
+    expect(day?.netAvgT1Pct).toBe(9.6);
+    expect(week?.total).toBe(1);
   });
 
   it("aggregates hit rates and average days", () => {

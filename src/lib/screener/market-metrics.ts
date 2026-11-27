@@ -2,6 +2,7 @@ import { getMarketProvider } from "@/lib/market";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { getCompanyName } from "@/lib/sectors/companies";
+import { cacheGet, cacheSet } from "@/lib/storage/json-cache";
 
 export interface MarketMetricItem {
   symbol: string;
@@ -29,16 +30,18 @@ export async function getMarketMetrics(
   if (!Array.isArray(symbols) || symbols.length === 0) return [];
 
   const targetSymbols = symbols
-    .slice(0, 25)
+    .slice(0, 120)
     .map((symbol) => symbol.toUpperCase().trim());
   const client = getMarketProvider();
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
 
-  return Promise.all(
-    targetSymbols.map(async (symbol) => {
-      try {
+  return mapLimit(targetSymbols, 6, async (symbol) => {
+    const cacheKey = `metric:${symbol}:${options.includeFlow === false ? "noflow" : "flow"}:v1`;
+    const cachedItem = await cacheGet<MarketMetricItem>(cacheKey);
+    if (cachedItem) return cachedItem;
+    try {
         const [reportData, dailyData, flowData] = await Promise.all([
           client
             .getCompanyReport(symbol, ["overview", "valuation"])
@@ -76,7 +79,7 @@ export async function getMarketMetrics(
             );
         }
 
-        return {
+        const item: MarketMetricItem = {
           symbol,
           name:
             reportData?.company_name ||
@@ -93,6 +96,8 @@ export async function getMarketMetrics(
           trend: tech?.trendAssessment || "Neutral",
           flow5d,
         };
+        await cacheSet(cacheKey, item, 10 * 60);
+        return item;
       } catch {
         return {
           symbol,
@@ -109,6 +114,25 @@ export async function getMarketMetrics(
           flow5d: null,
         };
       }
+    });
+}
+
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= items.length) return;
+        results[index] = await worker(items[index]);
+      }
     })
   );
+  return results;
 }

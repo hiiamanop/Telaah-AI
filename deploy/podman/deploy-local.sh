@@ -9,6 +9,11 @@ rm -rf .next node_modules/.cache
 echo "Building image without Podman cache ..."
 podman build --no-cache -t telaah-ai:local .
 
+if [ "${REBUILD_SCRAPER:-0}" = "1" ]; then
+  echo "Rebuilding scraper image ..."
+  podman build --no-cache -t telaah-scraper:local -f scraper/Dockerfile .
+fi
+
 echo "Restarting the local pod ..."
 ./deploy/podman/up.sh
 

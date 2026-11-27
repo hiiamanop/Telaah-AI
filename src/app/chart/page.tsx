@@ -19,6 +19,7 @@ import {
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { LiveChart } from "@/components/LiveChart";
+import { DepthCard } from "@/components/DepthCard";
 import { SymbolSearch } from "@/components/SymbolSearch";
 import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
@@ -697,6 +698,8 @@ export default function ChartPage() {
                 </p>
               )}
             </section>
+
+            <DepthCard symbol={symbol} />
 
             <section className="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-white/10 dark:bg-[#0b0b0c]">
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">

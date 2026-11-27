@@ -1,4 +1,5 @@
 import { getMarketProvider } from "@/lib/market";
+import { YahooClient } from "@/lib/market/yahoo";
 import { extractValuationMultiples } from "@/lib/sectors/types";
 import { computeTechnicalIndicators } from "@/lib/quant/indicators";
 import { getCompanyName } from "@/lib/sectors/companies";
@@ -22,6 +23,7 @@ export interface MarketMetricItem {
 export interface MarketMetricsOptions {
   includeFlow?: boolean;
   includeFundamentals?: boolean;
+  includeTechnicals?: boolean;
 }
 
 export async function getMarketMetrics(
@@ -39,7 +41,8 @@ export async function getMarketMetrics(
     .split("T")[0];
 
   return mapLimit(targetSymbols, 6, async (symbol) => {
-    const cacheKey = `metric:${symbol}:${options.includeFlow === false ? "noflow" : "flow"}:${options.includeFundamentals === false ? "light" : "full"}:v1`;
+    const includeTechnicals = options.includeTechnicals !== false;
+    const cacheKey = `metric:${symbol}:${options.includeFlow === false ? "noflow" : "flow"}:${options.includeFundamentals === false ? "light" : "full"}:${includeTechnicals ? "tech" : "notech"}:v1`;
     const cachedItem = await cacheGet<MarketMetricItem>(cacheKey);
     if (cachedItem) return cachedItem;
     try {
@@ -50,7 +53,9 @@ export async function getMarketMetrics(
                 .getCompanyReport(symbol, ["overview", "valuation"])
                 .catch(() => null)
             : Promise.resolve(null),
-          client.getDailyTransactions(symbol, ninetyDaysAgo).catch(() => null),
+          includeTechnicals
+            ? client.getDailyTransactions(symbol, ninetyDaysAgo).catch(() => null)
+            : Promise.resolve(null),
           options.includeFlow === false
             ? Promise.resolve(null)
             : client.getForeignFlow(symbol).catch(() => null),
@@ -119,6 +124,104 @@ export async function getMarketMetrics(
         };
       }
     });
+}
+
+
+export async function getFundamentalMetrics(
+  symbols: string[]
+): Promise<MarketMetricItem[]> {
+  const targetSymbols = symbols
+    .slice(0, 120)
+    .map((symbol) => symbol.toUpperCase().trim());
+  const yahoo = new YahooClient();
+  return mapLimit(targetSymbols, 8, async (symbol) => {
+    const cacheKey = `fundamental:${symbol}:v1`;
+    const cached = await cacheGet<MarketMetricItem>(cacheKey);
+    if (cached) return cached;
+    try {
+      const snapshot = await yahoo.getCompanySnapshot(symbol, [
+        "overview",
+        "valuation",
+      ]);
+      const multiples = extractValuationMultiples(snapshot?.valuation);
+      const item: MarketMetricItem = {
+        symbol,
+        name:
+          snapshot?.company_name ||
+          getCompanyName(symbol) ||
+          `PT ${symbol} Tbk`,
+        sector: snapshot?.overview?.sector || "Umum",
+        subSector: snapshot?.overview?.sub_sector || "",
+        marketCap: snapshot?.overview?.market_cap || 0,
+        lastPrice: multiples.lastClosePrice || 0,
+        dailyChangePct:
+          multiples.dailyChange !== null
+            ? multiples.dailyChange * 100
+            : 0,
+        pe: multiples.pe ?? null,
+        pb: multiples.pb ?? null,
+        rsi: null,
+        trend: "Neutral",
+        flow5d: null,
+      };
+      await cacheSet(cacheKey, item, 24 * 3600);
+      return item;
+    } catch {
+      return {
+        symbol,
+        name: getCompanyName(symbol) || `PT ${symbol} Tbk`,
+        sector: "Umum",
+        subSector: "",
+        marketCap: 0,
+        lastPrice: 0,
+        dailyChangePct: 0,
+        pe: null,
+        pb: null,
+        rsi: null,
+        trend: "Neutral",
+        flow5d: null,
+      };
+    }
+  });
+}
+
+export async function getFlowMetrics(
+  symbols: string[]
+): Promise<Array<{ symbol: string; flow5d: number | null }>> {
+  const targetSymbols = symbols
+    .slice(0, 120)
+    .map((symbol) => symbol.toUpperCase().trim());
+  const client = getMarketProvider();
+  return mapLimit(targetSymbols, 6, async (symbol) => {
+    const cacheKey = `flow:${symbol}:v1`;
+    const cached = await cacheGet<{ symbol: string; flow5d: number | null }>(
+      cacheKey
+    );
+    if (cached) return cached;
+    try {
+      const flowData = await client.getForeignFlow(symbol);
+      const flowItems = Array.isArray(flowData)
+        ? flowData
+        : Array.isArray((flowData as { data?: unknown })?.data)
+          ? ((flowData as { data: Array<{ net_foreign_inflow?: number }> }).data)
+          : [];
+      const flow5d =
+        flowItems.length > 0
+          ? flowItems
+              .slice(-5)
+              .reduce(
+                (sum, row) =>
+                  sum + Number((row as { net_foreign_inflow?: number }).net_foreign_inflow || 0),
+                0
+              )
+          : null;
+      const result = { symbol, flow5d };
+      await cacheSet(cacheKey, result, 10 * 60);
+      return result;
+    } catch {
+      return { symbol, flow5d: null };
+    }
+  });
 }
 
 async function mapLimit<T, R>(

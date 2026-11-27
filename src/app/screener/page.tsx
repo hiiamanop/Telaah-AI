@@ -41,6 +41,19 @@ export default function ScreenerPage() {
     complete: boolean;
     total: number;
     generatedAt: string | null;
+    passes?: {
+      base: { complete: boolean; progressPct: number };
+      fundamentals: {
+        complete: boolean;
+        progressPct: number;
+        updatedAt: string | null;
+      };
+      flow: {
+        complete: boolean;
+        progressPct: number;
+        updatedAt: string | null;
+      };
+    } | null;
   } | null>(null);
 
   const load = async () => {
@@ -106,6 +119,7 @@ export default function ScreenerPage() {
         complete: Boolean(data.complete),
         total: Number(data.total) || 962,
         generatedAt: data.generatedAt ?? null,
+        passes: data.passes ?? null,
       });
       setSnapshotAt(data.generatedAt ?? null);
       setFallback(false);
@@ -162,6 +176,8 @@ export default function ScreenerPage() {
     [items]
   );
 
+  const valuationReady =
+    !fullMode || Boolean(fullMeta?.passes?.fundamentals.complete);
   const results = useMemo(() => {
     const needle = query.trim().toUpperCase();
     const peLimit = Number(maxPe);
@@ -169,8 +185,8 @@ export default function ScreenerPage() {
     const rsiLimit = Number(minRsi);
     return items.filter((item) => {
       if (needle && !item.symbol.includes(needle) && !item.name.toUpperCase().includes(needle)) return false;
-      if (!fullMode) {
-        if (sector !== "all" && item.sector !== sector) return false;
+      if (!fullMode && sector !== "all" && item.sector !== sector) return false;
+      if (valuationReady) {
         if (maxPe && Number.isFinite(peLimit) && (item.pe === null || item.pe > peLimit)) return false;
         if (maxPb && Number.isFinite(pbLimit) && (item.pb === null || item.pb > pbLimit)) return false;
       }
@@ -178,7 +194,17 @@ export default function ScreenerPage() {
       if (trend !== "all" && item.trend !== trend) return false;
       return true;
     });
-  }, [items, query, sector, maxPe, maxPb, minRsi, trend, fullMode]);
+  }, [
+    items,
+    query,
+    sector,
+    maxPe,
+    maxPb,
+    minRsi,
+    trend,
+    fullMode,
+    valuationReady,
+  ]);
 
   const visibleResults = results.slice(0, 200);
 
@@ -201,7 +227,7 @@ export default function ScreenerPage() {
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {fullMode
-                ? "Full IDX: harga, perubahan, RSI, dan tren. PER/PBV/flow belum tersedia untuk seluruh bursa."
+                ? "Full IDX: base price/technical, lalu pass fundamental (PER/PBV/sector) dan flow. Progress terlihat di bawah."
                 : "Filter valuasi, RSI, tren, dan foreign flow untuk 88 emiten likuid. Snapshot diperbarui harian oleh cron; fallback 20 emiten jika snapshot belum siap."}
             </p>
           </div>
@@ -260,10 +286,11 @@ export default function ScreenerPage() {
           </p>
         )}
 
-        {fullMode && fullMeta && !fullMeta.complete && (
-          <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
-            Snapshot full IDX sedang dibangun: {items.length}/{fullMeta.total}{" "}
-            emiten. Data masih parsial.
+        {fullMode && fullMeta && (
+          <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-[10px] text-slate-500 dark:border-white/10 dark:bg-[#0b0b0c] dark:text-slate-400">
+            Base {fullMeta.passes?.base.progressPct.toFixed(0) ?? "0"}% ·
+            Fundamental {fullMeta.passes?.fundamentals.progressPct.toFixed(0) ?? "0"}% ·
+            Flow {fullMeta.passes?.flow.progressPct.toFixed(0) ?? "0"}%
           </p>
         )}
 
@@ -309,7 +336,7 @@ export default function ScreenerPage() {
         </div>
         )}
 
-        <div className={`grid gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c] sm:grid-cols-2 ${fullMode ? "lg:grid-cols-3" : "lg:grid-cols-6"}`}>
+        <div className={`grid gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-white/10 dark:bg-[#0b0b0c] sm:grid-cols-2 ${fullMode ? (valuationReady ? "lg:grid-cols-5" : "lg:grid-cols-3") : "lg:grid-cols-6"}`}>
           {!fullMode && (
           <select
             value={sector}
@@ -323,7 +350,7 @@ export default function ScreenerPage() {
             ))}
           </select>
           )}
-          {!fullMode && (
+          {valuationReady && (
           <input
             value={maxPe}
             onChange={(event) => setMaxPe(event.target.value)}
@@ -332,7 +359,7 @@ export default function ScreenerPage() {
             className="h-8 rounded-md border border-slate-200 bg-white px-2 font-mono text-[11px] text-zinc-700 outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200"
           />
           )}
-          {!fullMode && (
+          {valuationReady && (
           <input
             value={maxPb}
             onChange={(event) => setMaxPb(event.target.value)}

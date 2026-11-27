@@ -164,3 +164,29 @@ Planned additions:
 
 - [Bloomberg Terminal — Wikipedia](https://en.wikipedia.org/wiki/Bloomberg_Terminal)
 - [The Twelve-Factor App](https://12factor.net/)
+
+## 12. Data coverage added after Phase 0
+
+### Full IDX screener passes
+
+The full IDX snapshot is built in three passes:
+
+1. **base**: price, daily change, RSI, and trend for all 962 listed symbols.
+2. **fundamentals**: PER/PBV and market cap from Yahoo quoteSummary. This pass is fast (roughly two minutes for the full universe). Sector remains limited for the full universe because Yahoo's asset profile is often empty for IDX tickers.
+3. **flow**: 5-day foreign flow from the Stockbit/IDX scraper. This is the slow pass and can run for over an hour; the screener shows progress and preserves partial data.
+
+The `/screener` page exposes base progress, fundamental progress, and flow progress. Fundamental filters are enabled once the fundamentals pass is complete.
+
+### News & Markets
+
+`/news` provides:
+
+- Google News RSS headlines for IHSG or a selected ticker;
+- IHSG/LQ45/IDX30, USD/IDR, and commodity cards from the existing market cache;
+- source and timestamp on every headline.
+
+This is a public-source headline terminal, not a licensed Bloomberg news wire. Multi-user messaging, bond depth, and listed-options depth are not available from the current sources.
+
+### Order book
+
+`/chart` includes a Stockbit top-5 bid/offer card with ARA/ARB. It refreshes every five seconds and is labelled **Top-5, unofficial, near-real-time**. It is not a full exchange order book and does not include tick-by-tick trades. A licensed exchange feed is required for that.

@@ -33,6 +33,11 @@ export interface ChartCandle {
   volume: number;
 }
 
+export interface DepthLevel {
+  price: number;
+  volume: number;
+}
+
 export interface StockbitQuote {
   symbol: string;
   last: number;
@@ -51,6 +56,8 @@ export interface StockbitQuote {
   foreignCurrent: boolean;
   bid: number | null;
   offer: number | null;
+  bids?: DepthLevel[];
+  offers?: DepthLevel[];
   ara: number | null;
   arb: number | null;
   source: string;
@@ -156,6 +163,8 @@ export class ScraperClient {
       foreign_current?: boolean;
       bid?: number | null;
       offer?: number | null;
+      bids?: DepthLevel[];
+      offers?: DepthLevel[];
       ara?: number | null;
       arb?: number | null;
       source?: string;
@@ -179,6 +188,8 @@ export class ScraperClient {
       foreignCurrent: Boolean(result.foreign_current),
       bid: result.bid ?? null,
       offer: result.offer ?? null,
+      bids: Array.isArray(result.bids) ? result.bids : [],
+      offers: Array.isArray(result.offers) ? result.offers : [],
       ara: result.ara ?? null,
       arb: result.arb ?? null,
       source: result.source ?? "stockbit",

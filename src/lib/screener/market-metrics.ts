@@ -21,6 +21,7 @@ export interface MarketMetricItem {
 
 export interface MarketMetricsOptions {
   includeFlow?: boolean;
+  includeFundamentals?: boolean;
 }
 
 export async function getMarketMetrics(
@@ -38,14 +39,17 @@ export async function getMarketMetrics(
     .split("T")[0];
 
   return mapLimit(targetSymbols, 6, async (symbol) => {
-    const cacheKey = `metric:${symbol}:${options.includeFlow === false ? "noflow" : "flow"}:v1`;
+    const cacheKey = `metric:${symbol}:${options.includeFlow === false ? "noflow" : "flow"}:${options.includeFundamentals === false ? "light" : "full"}:v1`;
     const cachedItem = await cacheGet<MarketMetricItem>(cacheKey);
     if (cachedItem) return cachedItem;
     try {
+        const includeFundamentals = options.includeFundamentals !== false;
         const [reportData, dailyData, flowData] = await Promise.all([
-          client
-            .getCompanyReport(symbol, ["overview", "valuation"])
-            .catch(() => null),
+          includeFundamentals
+            ? client
+                .getCompanyReport(symbol, ["overview", "valuation"])
+                .catch(() => null)
+            : Promise.resolve(null),
           client.getDailyTransactions(symbol, ninetyDaysAgo).catch(() => null),
           options.includeFlow === false
             ? Promise.resolve(null)

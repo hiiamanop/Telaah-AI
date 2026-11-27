@@ -61,15 +61,17 @@
 - [x] Measure harmonic pattern success rate and target/invalidation outcomes <!-- id=59 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Expand harmonic success stats to 4H, 1W, and 1M with a larger sample <!-- id=60 priority=medium done=2026-11-26 created=2026-11-26 -->
 - [x] Finish chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=61 priority=medium done=2026-11-27 created=2026-11-26 -->
-- [ ] Expand screener to the full IDX universe and saved presets <!-- id=62 priority=medium created=2026-11-26 -->
+- [x] Expand screener to the full IDX universe and saved presets <!-- id=62 priority=medium done=2026-11-27 created=2026-11-26 -->
 - [x] Add dividend calendar to the portfolio tracker <!-- id=63 priority=medium done=2026-11-27 created=2026-11-26 -->
 - [x] Expand harmonic screener with 1D/1W visibility and remove the top-5 cap <!-- id=64 priority=high done=2026-11-27 created=2026-11-27 -->
 - [x] Validate harmonic stats: 88 symbols, walk-forward split, fees <!-- id=65 priority=high done=2026-11-27 created=2026-11-27 -->
 - [x] Add chart compare overlay, corporate-action markers, and watchlist toggle <!-- id=66 priority=medium done=2026-11-27 created=2026-11-27 -->
-- [ ] Expand screener universe and add saved presets <!-- id=67 priority=medium created=2026-11-27 -->
+- [x] Expand screener universe and add saved presets <!-- id=67 priority=medium done=2026-11-27 created=2026-11-27 -->
 - [x] Add dividend calendar to the portfolio tracker <!-- id=68 priority=medium done=2026-11-27 created=2026-11-26 -->
 - [x] Add bandar phase alerts <!-- id=69 priority=high done=2026-11-27 created=2026-11-27 -->
 - [x] Guard the deploy workflow when VPS secrets are absent <!-- id=70 priority=medium done=2026-11-27 created=2026-11-27 -->
-- [ ] Build harmonic outcome logging and a reviewed calibration loop <!-- id=71 priority=high created=2026-11-27 -->
-- [ ] Expand the general screener from 88 liquid symbols to the full IDX universe <!-- id=72 priority=medium created=2026-11-27 -->
-- [ ] Move production deploy from the local pod to a repeatable HA target <!-- id=73 priority=high created=2026-11-27 -->
+- [x] Build harmonic outcome logging and a reviewed calibration loop <!-- id=71 priority=high done=2026-11-27 created=2026-11-27 -->
+- [x] Expand the general screener from 88 liquid symbols to the full IDX universe <!-- id=72 priority=medium done=2026-11-27 created=2026-11-27 -->
+- [-] Local PC is production; no HA/VPS target <!-- id=73 priority=high created=2026-11-27 -->
+- [x] Build multi-panel workspace with saved layouts <!-- id=74 done=2026-11-27 created=2026-11-27 -->
+- [ ] Re-login Stockbit before the refresh token expires <!-- id=75 priority=high created=2026-11-27 -->

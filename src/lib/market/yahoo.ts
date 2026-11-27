@@ -187,6 +187,7 @@ interface FinancialPeriodDraft {
 
 export function toYahooSymbol(symbol: string): string {
   const clean = symbol.trim().toUpperCase();
+  if (clean === "IHSG" || clean === "COMPOSITE") return "^JKSE";
   if (!clean || clean.startsWith("^")) return clean;
   return clean.endsWith(".JK") ? clean : `${clean}.JK`;
 }

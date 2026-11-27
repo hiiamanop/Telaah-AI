@@ -4,6 +4,7 @@ import {
   scanHarmonicUniverse,
   type HarmonicScanResult,
 } from "@/lib/screener/harmonic-screener";
+import { recordHarmonicScan } from "@/lib/harmonic/evaluations";
 import { cacheGet, cacheSet } from "@/lib/storage/json-cache";
 import { RATE_LIMIT_RULES, guardRateLimit } from "@/lib/security/rate-limit";
 
@@ -47,6 +48,9 @@ export async function GET(req: NextRequest) {
       cachePath,
     });
     await cacheSet(redisKey, result, 12 * 3600);
+    void recordHarmonicScan(result).catch(() => {
+      // Candidate logging must not break the scan response.
+    });
     return NextResponse.json({ success: true, cached: false, ...result });
   } catch (error) {
     return NextResponse.json(

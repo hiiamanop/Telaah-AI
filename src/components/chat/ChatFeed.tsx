@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import {
   Bot,
   User,
@@ -66,14 +66,26 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
   onOpenTradingPlan,
   onOpenDividendCalc,
 }) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const element = scrollRef.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
   }, [messages, isLoading, loadingStage]);
 
   return (
-    <div className="flex-1 overflow-y-auto pl-3 sm:pl-4 pr-4 sm:pr-5 py-3.5 space-y-3.5 text-xs font-sans" aria-live="polite">
+    <div
+      ref={scrollRef}
+      className="flex-1 min-h-0 overflow-y-auto no-scrollbar pl-3 sm:pl-4 pr-4 sm:pr-5 py-3.5 space-y-3.5 text-xs font-sans"
+      aria-live="polite"
+    >
       {/* Empty State / Terminal Starter */}
       {messages.length === 0 && (
         <div className="my-auto py-6 space-y-4">
@@ -253,7 +265,6 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
         </div>
       )}
 
-      <div ref={bottomRef} />
     </div>
   );
 };

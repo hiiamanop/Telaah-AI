@@ -10,6 +10,7 @@ import {
   Activity,
   BookOpen,
   Star,
+  Target,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
@@ -320,12 +321,21 @@ export default function HarmonicPage() {
                   : "Sampel 88 emiten likuid · 4H/1D/1W/1M"}
               </p>
             </div>
-            {statsLoading && (
-              <span className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                menghitung...
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/harmonic/calibration"
+                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 font-mono text-[10px] text-slate-500 transition hover:text-zinc-950 dark:border-white/10 dark:text-slate-400 dark:hover:text-white"
+              >
+                <Target className="h-3 w-3" />
+                Calibration
+              </Link>
+              {statsLoading && (
+                <span className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  menghitung...
+                </span>
+              )}
+            </div>
           </div>
           {stats && stats.stats.length > 0 ? (
             <div className="overflow-x-auto">

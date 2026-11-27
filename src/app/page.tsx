@@ -725,6 +725,20 @@ export default function Home() {
         return;
       }
 
+      if (data.assistantMessage) {
+        const timeStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        const botReply: ChatMessage = {
+          id: "b_" + Date.now(),
+          sender: "assistant",
+          text: data.assistantMessage,
+          timestamp: timeStr,
+        };
+        const finalMsgs = [...baseMessages, botReply];
+        setMessages(finalMsgs);
+        updateActiveSession(finalMsgs, report);
+        return;
+      }
+
       if (data.needsConfirmation) {
         setNeedsConfirmation(true);
         setCandidateSymbol(data.candidateSymbol || "");

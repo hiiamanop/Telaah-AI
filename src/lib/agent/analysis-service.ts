@@ -13,6 +13,7 @@ import {
 } from "./conversation";
 import { buildBankShortlistMessage } from "@/lib/screener/bank-screener";
 import { getMarketProvider } from "@/lib/market";
+import { hasNewerFundamentalUpdate } from "@/lib/market/financial-overrides";
 import {
   getTodayWIB,
   searchSemanticReportCache,
@@ -118,7 +119,10 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
   if (confirmedSymbol && /^[A-Z]{4}$/.test(confirmedSymbol)) {
     const exactKey = exactTerminalKey(prompt, mode, confirmedSymbol);
     const exact = await cacheGet<CompanyIntelligenceReport>(exactKey);
-    if (exact) {
+    if (
+      exact &&
+      !hasNewerFundamentalUpdate(confirmedSymbol, exact.fundamentalUpdate?.periodEnd)
+    ) {
       return {
         type: "report",
         report: {
@@ -130,7 +134,15 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
       };
     }
     const cacheCheck = await searchSemanticReportCache(prompt, confirmedSymbol, 0.88, mode);
-    if (cacheCheck.isMatch && cacheCheck.isFresh && cacheCheck.payload?.report) {
+    if (
+      cacheCheck.isMatch &&
+      cacheCheck.isFresh &&
+      cacheCheck.payload?.report &&
+      !hasNewerFundamentalUpdate(
+        confirmedSymbol,
+        cacheCheck.payload.report.fundamentalUpdate?.periodEnd
+      )
+    ) {
       await cacheSet(exactKey, cacheCheck.payload.report, 18 * 3600);
       return {
         type: "report",
@@ -185,7 +197,10 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
   // Step 1b: Exact cache, then semantic vector cache with targetSymbol.
   const exactKey = exactTerminalKey(prompt, mode, targetSymbol);
   const exact = await cacheGet<CompanyIntelligenceReport>(exactKey);
-  if (exact) {
+  if (
+    exact &&
+    !hasNewerFundamentalUpdate(targetSymbol, exact.fundamentalUpdate?.periodEnd)
+  ) {
     return {
       type: "report",
       report: {
@@ -197,7 +212,15 @@ export async function runAnalysis(input: AnalysisInput): Promise<AnalysisResult>
     };
   }
   const cacheHit = await searchSemanticReportCache(prompt, targetSymbol, 0.88, mode);
-  if (cacheHit.isMatch && cacheHit.isFresh && cacheHit.payload?.report) {
+  if (
+    cacheHit.isMatch &&
+    cacheHit.isFresh &&
+    cacheHit.payload?.report &&
+    !hasNewerFundamentalUpdate(
+      targetSymbol,
+      cacheHit.payload.report.fundamentalUpdate?.periodEnd
+    )
+  ) {
     await cacheSet(exactKey, cacheHit.payload.report, 18 * 3600);
     return {
       type: "report",

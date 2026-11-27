@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { latestCompletedQuarterEnd, quarterLabel } from "../financials";
-import { getFundamentalUpdate } from "../../market/financial-overrides";
+import {
+  getFundamentalUpdate,
+  hasNewerFundamentalUpdate,
+} from "../../market/financial-overrides";
 
 describe("financial period labels", () => {
   it("labels Yahoo 3M period ends as quarters", () => {
@@ -33,5 +36,12 @@ describe("financial overrides", () => {
     expect(update?.periodEnd).toBe("2026-09-30");
     expect(update?.periodType).toBe("cumulative");
     expect(update?.summary).toContain("Rp2,66");
+  });
+
+  it("forces a refresh when the manual period is newer than the cache", () => {
+    expect(hasNewerFundamentalUpdate("BUMI", undefined)).toBe(true);
+    expect(hasNewerFundamentalUpdate("BUMI", "2026-06-30")).toBe(true);
+    expect(hasNewerFundamentalUpdate("BUMI", "2026-09-30")).toBe(false);
+    expect(hasNewerFundamentalUpdate("BBCA", undefined)).toBe(false);
   });
 });

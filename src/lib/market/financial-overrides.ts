@@ -38,3 +38,16 @@ export function getFundamentalUpdate(
     return null;
   }
 }
+
+/**
+ * The cache must not outlive a newer manual period. If the override is newer
+ * than the report's last known period, force a fresh analysis.
+ */
+export function hasNewerFundamentalUpdate(
+  symbol: string,
+  cachedPeriodEnd?: string | null
+): boolean {
+  const update = getFundamentalUpdate(symbol);
+  if (!update) return false;
+  return !cachedPeriodEnd || update.periodEnd > cachedPeriodEnd;
+}

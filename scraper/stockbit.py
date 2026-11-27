@@ -527,6 +527,18 @@ def parse_quote(payload: dict[str, Any], symbol: str) -> dict[str, Any]:
             return _number(value.get("value"))
         return _number(value)
 
+    def levels(rows: Any) -> list[dict[str, float]]:
+        out: list[dict[str, float]] = []
+        if isinstance(rows, list):
+            for row in rows[:5]:
+                if not isinstance(row, dict):
+                    continue
+                price = _number(row.get("price"))
+                volume = _number(row.get("volume"))
+                if price is not None and price > 0:
+                    out.append({"price": price, "volume": volume or 0.0})
+        return out
+
     return {
         "symbol": str(data.get("symbol") or symbol).upper(),
         "last": last,
@@ -545,6 +557,8 @@ def parse_quote(payload: dict[str, Any], symbol: str) -> dict[str, Any]:
         "foreign_current": bool(data.get("has_foreign_bs")),
         "bid": top_price(data.get("bid")),
         "offer": top_price(data.get("offer")),
+        "bids": levels(data.get("bid")),
+        "offers": levels(data.get("offer")),
         "ara": threshold(data.get("ara")),
         "arb": threshold(data.get("arb")),
         "source": "stockbit",

@@ -42,7 +42,7 @@
 - [x] Write robo-trade design: signals, risk limits, fees, paper-first; live broker execution blocked until API access <!-- id=40 priority=high done=2026-11-24 created=2026-11-24 -->
 - [x] Start Qdrant and verify semantic cache health <!-- id=41 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Extend chart: MA/EMA, RSI/MACD, compare overlay, corporate-action markers, watchlist toggle <!-- id=42 priority=medium done=2026-11-27 created=2026-11-24 -->
-- [ ] Build IDX screener with fundamental/technical/flow filters and saved presets <!-- id=43 priority=medium created=2026-11-24 -->
+- [•] Full IDX fundamentals/flow passes (flow pass running) <!-- id=43 priority=medium created=2026-11-24 -->
 - [x] Build portfolio and dividend tracker (holdings, P&L, dividend calendar) <!-- id=44 priority=medium done=2026-11-27 created=2026-11-24 -->
 - [x] Build BSJP backtest engine (close-to-next-open, fees, slippage, liquidity filters) <!-- id=45 priority=high done=2026-11-26 created=2026-11-24 -->
 - [x] Build BSJP paper runner + Telegram trade journal <!-- id=46 priority=high done=2026-11-26 created=2026-11-24 -->
@@ -75,3 +75,10 @@
 - [-] Local PC is production; no HA/VPS target <!-- id=73 priority=high created=2026-11-27 -->
 - [x] Build multi-panel workspace with saved layouts <!-- id=74 done=2026-11-27 created=2026-11-27 -->
 - [ ] Re-login Stockbit before the refresh token expires <!-- id=75 priority=high created=2026-11-27 -->
+- [x] Build News & Markets page (Google News RSS + indices/FX/commodities) <!-- id=76 done=2026-11-27 created=2026-11-27 -->
+- [x] Add Stockbit top-5 order book card to the chart <!-- id=77 done=2026-11-27 created=2026-11-27 -->
+- [ ] Add multi-user messaging (requires auth, DB, WebSocket) <!-- id=78 priority=low created=2026-11-27 -->
+- [ ] Add bond/options depth (data source unavailable) <!-- id=79 priority=low created=2026-11-27 -->
+- [ ] Add licensed exchange tick/order-book feed <!-- id=80 priority=medium created=2026-11-27 -->
+- [x] Add HBA coal benchmark to Macro & markets <!-- id=81 priority=medium done=2026-11-27 created=2026-11-27 -->
+- [x] Fix harmonic 429, nav order, and empty workspace watchlist <!-- id=82 priority=high done=2026-11-27 created=2026-11-27 -->

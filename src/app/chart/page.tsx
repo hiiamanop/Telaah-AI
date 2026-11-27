@@ -19,6 +19,7 @@ import {
 import { Header } from "@/components/Header";
 import { CompanyLogo } from "@/components/CompanyLogo";
 import { LiveChart } from "@/components/LiveChart";
+import { DepthCard } from "@/components/DepthCard";
 import { SymbolSearch } from "@/components/SymbolSearch";
 import { useChartStream } from "@/lib/chart/use-chart-stream";
 import type { ChartFrame, ChartTimeframe } from "@/lib/chart/types";
@@ -342,6 +343,7 @@ export default function ChartPage() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_290px]">
+          <div className="min-w-0 space-y-3">
           <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03] dark:border-white/10 dark:bg-[#0b0b0c] dark:shadow-none">
             <div className="flex flex-col gap-3 border-b border-slate-100 px-3.5 py-3 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between sm:px-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -580,6 +582,9 @@ export default function ChartPage() {
               </span>
             </div>
           </section>
+
+          <DepthCard symbol={symbol} />
+          </div>
 
           <aside className="space-y-3">
             <section className="rounded-xl border border-slate-200 bg-white p-3.5 dark:border-white/10 dark:bg-[#0b0b0c]">

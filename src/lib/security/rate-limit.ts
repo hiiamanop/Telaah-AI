@@ -27,6 +27,7 @@ export const RATE_LIMIT_RULES = {
   harmonic: { limit: 90, windowMs: 60_000 },
   harmonicScan: { limit: 10, windowMs: 300_000 },
   harmonicStats: { limit: 6, windowMs: 300_000 },
+  harmonicAlerts: { limit: 12, windowMs: 60_000 },
 } satisfies Record<string, RateLimitRule>;
 
 const REDIS_PREFIX = "telaah:rl:";

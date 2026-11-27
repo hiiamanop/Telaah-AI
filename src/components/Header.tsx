@@ -65,8 +65,9 @@ export const Header: React.FC<HeaderProps> = ({
     { href: "/watchlist", label: t("nav.watchlist", "Watchlist") },
     { href: "/portfolio", label: t("nav.portfolio", "Portfolio") },
     { href: "/screener", label: t("nav.screener", "Screener") },
-    { href: "/harmonic", label: t("nav.harmonic", "Harmonic") },
+    { href: "/news", label: t("nav.news", "News") },
     { href: "/workspace", label: t("nav.workspace", "Workspace") },
+    { href: "/harmonic", label: t("nav.harmonic", "Harmonic") },
     { href: "/chart", label: t("nav.chart", "Chart") },
   ];
 

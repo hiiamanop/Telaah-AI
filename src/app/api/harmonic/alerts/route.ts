@@ -26,7 +26,11 @@ export async function POST(req: NextRequest) {
   if (!secretMatches(req.headers.get("x-alert-secret"), expected)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
-  const limited = await guardRateLimit(req, "harmonicScan", RATE_LIMIT_RULES.harmonicScan);
+  const limited = await guardRateLimit(
+    req,
+    "harmonicAlerts",
+    RATE_LIMIT_RULES.harmonicAlerts
+  );
   if (limited) return limited;
   const dryRun = new URL(req.url).searchParams.get("dry") === "1";
   try {

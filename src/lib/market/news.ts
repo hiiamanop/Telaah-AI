@@ -175,7 +175,9 @@ async function fetchDecodingParams(
   }
 }
 
-function parseBatchResponse(text: string): string[] {
+function parseBatchResponse(
+  text: string
+): Array<{ id: string | null; url: string }> {
   let body = text;
   if (body.includes("\n\n")) {
     body = body.slice(body.indexOf("\n\n") + 2);
@@ -189,7 +191,7 @@ function parseBatchResponse(text: string): string[] {
     return [];
   }
   if (!Array.isArray(rows)) return [];
-  const urls: string[] = [];
+  const decoded: Array<{ id: string | null; url: string }> = [];
   for (const row of rows) {
     if (!Array.isArray(row) || row.length < 3) continue;
     if (row[0] !== "wrb.fr" && row[1] !== "Fbv4je") continue;
@@ -202,14 +204,26 @@ function parseBatchResponse(text: string): string[] {
       }
     }
     if (
-      Array.isArray(payload) &&
-      payload[0] === "garturlres" &&
-      typeof payload[1] === "string"
+      !Array.isArray(payload) ||
+      payload[0] !== "garturlres" ||
+      typeof payload[1] !== "string"
     ) {
-      urls.push(payload[1]);
+      continue;
     }
+
+    // Google returns rows out of order. The caller's index is echoed in the
+    // trailing cells, so map by that id instead of response order.
+    let id: string | null = null;
+    for (let i = row.length - 1; i >= 3; i -= 1) {
+      const cell = row[i];
+      if (cell !== null && cell !== undefined) {
+        id = String(cell);
+        break;
+      }
+    }
+    decoded.push({ id, url: payload[1] });
   }
-  return urls;
+  return decoded;
 }
 
 async function decodeGoogleNewsUrls(
@@ -262,8 +276,16 @@ async function decodeGoogleNewsUrls(
       signal: AbortSignal.timeout(10_000),
     });
     const decoded = response.ok ? parseBatchResponse(await response.text()) : [];
+    const byId = new Map<string, string>();
+    const ordered: string[] = [];
+    for (const row of decoded) {
+      if (row.id !== null) byId.set(row.id, row.url);
+      ordered.push(row.url);
+    }
     pending.forEach((entry, index) => {
-      const url = decoded[index];
+      const url =
+        byId.get(String(index)) ??
+        (byId.size === 0 ? ordered[index] : undefined);
       if (url) result.set(entry.source, url);
       decodedCache.set(entry.source, {
         url: url ?? null,

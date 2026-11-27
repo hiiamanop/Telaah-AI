@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchGoogleNews } from "@/lib/market/news";
+import {
+  enrichNewsItems,
+  fetchGoogleNews,
+} from "@/lib/market/news";
 import { guardRateLimit, RATE_LIMIT_RULES } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const limited = await guardRateLimit(req, "chart", RATE_LIMIT_RULES.chart);
@@ -16,13 +19,33 @@ export async function GET(req: NextRequest) {
     .toUpperCase()
     .replace(".JK", "");
   const symbol = /^[A-Z]{4}$/.test(raw) ? raw : "IHSG";
-  const limit = Math.max(1, Math.min(Number(searchParams.get("limit")) || 20, 30));
+  const pageSize = Math.max(
+    1,
+    Math.min(
+      Number(searchParams.get("pageSize")) ||
+        Number(searchParams.get("limit")) ||
+        9,
+      20
+    )
+  );
+  const requestedPage = Math.max(1, Number(searchParams.get("page")) || 1);
 
-  const items = await fetchGoogleNews(symbol, limit).catch(() => []);
+  const all = await fetchGoogleNews(symbol, 100).catch(() => []);
+  const pages = Math.max(1, Math.ceil(all.length / pageSize));
+  const page = Math.min(requestedPage, pages);
+  const start = (page - 1) * pageSize;
+  const slice = all.slice(start, start + pageSize);
+  const items = await enrichNewsItems(slice).catch(() => slice);
+
   return NextResponse.json({
     success: true,
     symbol,
     items,
+    page,
+    pageSize,
+    total: all.length,
+    pages,
+    hasMore: page < pages,
     source: "Google News RSS",
     delayed: true,
   });

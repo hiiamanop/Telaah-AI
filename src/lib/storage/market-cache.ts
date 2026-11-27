@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { getCoalBenchmark } from "@/lib/market/coal";
 import { getCommodityPrices } from "@/lib/market/commodities";
 import { getMarketIndices } from "@/lib/market/indices";
 import { getUsdIdrRate } from "@/lib/market/fx";
@@ -72,10 +73,11 @@ export async function getOrFetchDailyMarketData(
     if (cached) return cached;
   }
 
-  const [indices, commodities, usdIdr] = await Promise.all([
+  const [indices, commodities, usdIdr, coal] = await Promise.all([
     getMarketIndices().catch(() => []),
     getCommodityPrices().catch(() => []),
     getUsdIdrRate().catch(() => null),
+    getCoalBenchmark().catch(() => null),
   ]);
 
   const items: MarketItem[] = [...indices];
@@ -87,6 +89,20 @@ export async function getOrFetchDailyMarketData(
       price: `Rp ${Math.round(usdIdr).toLocaleString("id-ID")}`,
       change: "",
       isPositive: false,
+    });
+  }
+
+  if (coal) {
+    items.push({
+      name: "Coal HBA",
+      code: "COAL",
+      price: `$${coal.price.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`,
+      change: `${coal.changePct >= 0 ? "+" : ""}${coal.changePct.toFixed(2)}%`,
+      isPositive: coal.changePct >= 0,
+      unit: "USD / Ton",
     });
   }
 

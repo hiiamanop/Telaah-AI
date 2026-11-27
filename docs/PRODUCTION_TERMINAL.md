@@ -182,8 +182,10 @@ The `/screener` page exposes base progress, fundamental progress, and flow progr
 `/news` provides:
 
 - Google News RSS headlines for IHSG or a selected ticker;
-- IHSG/LQ45/IDX30, USD/IDR, and commodity cards from the existing market cache;
+- IHSG/LQ45/IDX30, USD/IDR, commodity cards, and the HBA coal benchmark from ESDM;
 - source and timestamp on every headline.
+
+HBA is Indonesia's official coal benchmark and is republished twice a month, so the coal card is period-over-period rather than intraday. Yahoo commodity futures remain delayed.
 
 This is a public-source headline terminal, not a licensed Bloomberg news wire. Multi-user messaging, bond depth, and listed-options depth are not available from the current sources.
 

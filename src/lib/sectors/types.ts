@@ -318,6 +318,7 @@ export interface FilingItem {
 export interface NewsItem {
   id?: string | number;
   title: string;
+  image?: string;
   body?: string;
   published_at?: string;
   source?: string;

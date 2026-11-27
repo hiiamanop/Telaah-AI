@@ -1,8 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Clock3, Globe2, Loader2, Newspaper, RefreshCw, Search } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Globe2,
+  Loader2,
+  Newspaper,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { Header } from "@/components/Header";
 import type { MarketItem } from "@/lib/storage/market-cache";
 import type { NewsItem } from "@/lib/sectors/types";
@@ -21,6 +30,18 @@ function formatRelative(iso: string | undefined): string {
   });
 }
 
+function pageWindow(current: number, total: number): Array<number | "ellipsis"> {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+  const pages = new Set<number>([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((item) => item >= 1 && item <= total).sort((a, b) => a - b);
+  const result: Array<number | "ellipsis"> = [];
+  sorted.forEach((item, index) => {
+    if (index > 0 && item - sorted[index - 1] > 1) result.push("ellipsis");
+    result.push(item);
+  });
+  return result;
+}
+
 export default function NewsPage() {
   const [symbol, setSymbol] = useState("IHSG");
   const [query, setQuery] = useState("IHSG");
@@ -28,13 +49,19 @@ export default function NewsPage() {
   const [market, setMarket] = useState<MarketItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const newsRef = useRef<HTMLElement>(null);
 
-  const loadNews = async (target: string) => {
+  const loadNews = async (target: string, requestedPage = 1) => {
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(
-        `/api/news?symbol=${encodeURIComponent(target)}&limit=20`,
+        `/api/news?symbol=${encodeURIComponent(
+          target
+        )}&page=${requestedPage}&pageSize=9`,
         { cache: "no-store" }
       );
       const data = await response.json();
@@ -42,6 +69,9 @@ export default function NewsPage() {
       setNews(data.items ?? []);
       setSymbol(data.symbol ?? target);
       setQuery(data.symbol ?? target);
+      setPage(data.page ?? requestedPage);
+      setPages(data.pages ?? 1);
+      setTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat news.");
     } finally {
@@ -49,8 +79,14 @@ export default function NewsPage() {
     }
   };
 
+  const gotoPage = async (nextPage: number) => {
+    if (nextPage < 1 || nextPage > pages || nextPage === page) return;
+    await loadNews(symbol, nextPage);
+    newsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   useEffect(() => {
-    void loadNews("IHSG");
+    void loadNews("IHSG", 1);
     fetch("/api/market-overview", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
@@ -79,7 +115,7 @@ export default function NewsPage() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const clean = query.trim().toUpperCase().replace(".JK", "");
-    void loadNews(/^[A-Z]{4}$/.test(clean) ? clean : "IHSG");
+    void loadNews(/^[A-Z]{4}$/.test(clean) ? clean : "IHSG", 1);
   };
 
   return (
@@ -137,7 +173,7 @@ export default function NewsPage() {
               Macro & markets
             </h2>
             <span className="font-mono text-[9px] text-slate-400">
-              Yahoo, delayed
+              Yahoo + ESDM, delayed
             </span>
           </div>
           {market.length === 0 ? (
@@ -182,14 +218,17 @@ export default function NewsPage() {
           </p>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0b0b0c]">
+        <section
+          ref={newsRef}
+          className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0b0b0c]"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/[0.06]">
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 {symbol} news
               </h2>
               <p className="mt-0.5 text-[10px] text-slate-400">
-                Google News RSS · headline dan sumber asli
+                Google News RSS · halaman {page}/{pages} · {total} headline
               </p>
             </div>
             {loading && (
@@ -205,33 +244,119 @@ export default function NewsPage() {
               Belum ada headline untuk {symbol}.
             </p>
           ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+            <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
               {news.map((item, index) => (
-                <li key={`${item.title}-${index}`} className="px-4 py-3">
+                <article
+                  key={`${item.title}-${index}`}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#111113]"
+                >
                   <a
                     href={item.url ?? "#"}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-xs font-medium text-zinc-900 transition hover:text-sky-600 dark:text-zinc-100 dark:hover:text-sky-400"
+                    className="block aspect-[16/9] overflow-hidden bg-slate-100 dark:bg-white/[0.04]"
                   >
-                    {item.title}
+                    {item.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.image}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Newspaper className="h-7 w-7 text-slate-300 dark:text-slate-600" />
+                      </div>
+                    )}
                   </a>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] text-slate-400">
-                    <span>{item.source ?? "News"}</span>
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 className="h-2.5 w-2.5" />
-                      {formatRelative(item.published_at)}
-                    </span>
-                    <Link
-                      href={`/chart?symbol=${symbol}&tf=1Y`}
-                      className="text-slate-500 hover:text-zinc-900 dark:hover:text-white"
+                  <div className="p-3">
+                    <a
+                      href={item.url ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="line-clamp-3 block text-xs font-semibold leading-snug text-zinc-900 transition hover:text-sky-600 dark:text-zinc-100 dark:hover:text-sky-400"
                     >
-                      buka chart →
-                    </Link>
+                      {item.title}
+                    </a>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[9px] text-slate-400">
+                      <span>{item.source ?? "News"}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="h-2.5 w-2.5" />
+                        {formatRelative(item.published_at)}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[9px] dark:border-white/[0.06]">
+                      <Link
+                        href={`/chart?symbol=${symbol}&tf=1Y`}
+                        className="text-slate-500 hover:text-zinc-900 dark:hover:text-white"
+                      >
+                        buka chart →
+                      </Link>
+                      <a
+                        href={item.url ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-slate-500 hover:text-sky-600 dark:hover:text-sky-400"
+                      >
+                        baca →
+                      </a>
+                    </div>
                   </div>
-                </li>
+                </article>
               ))}
-            </ul>
+            </div>
+          )}
+
+          {pages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 text-[10px] dark:border-white/[0.06]">
+              <span className="font-mono text-slate-400">
+                {Math.min(total, (page - 1) * 9 + 1)}–
+                {Math.min(total, page * 9)} dari {total}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => void gotoPage(page - 1)}
+                  disabled={page <= 1}
+                  aria-label="Halaman sebelumnya"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 disabled:opacity-40 dark:border-white/10 dark:text-slate-400"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                {pageWindow(page, pages).map((item, index) =>
+                  item === "ellipsis" ? (
+                    <span key={`gap-${index}`} className="px-1 text-slate-400">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => void gotoPage(item)}
+                      aria-current={item === page ? "page" : undefined}
+                      className={`h-7 min-w-7 rounded-md border px-1.5 font-mono text-[10px] ${
+                        item === page
+                          ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-black"
+                          : "border-slate-200 text-slate-500 hover:text-zinc-950 dark:border-white/10 dark:text-slate-400 dark:hover:text-white"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => void gotoPage(page + 1)}
+                  disabled={page >= pages}
+                  aria-label="Halaman berikutnya"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 disabled:opacity-40 dark:border-white/10 dark:text-slate-400"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
           )}
         </section>
       </main>
